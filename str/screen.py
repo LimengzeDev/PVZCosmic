@@ -43,7 +43,3 @@ class GameButton:   #定义按钮类
                     self.button_down = 1
                 else:
                     self.button_down = 0
-
-    def drow
-                
-        
