@@ -24,6 +24,7 @@ class LevelLoader:
     def get_available_levels(self):
         """获取所有可用关卡ID"""
         return sorted(self.levels.keys())
+    print(self.levels.get(str(level_id)))
     print("我是码农")
     time.sleep(0.5)
     print("我也是码农")
