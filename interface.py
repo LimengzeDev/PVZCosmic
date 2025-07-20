@@ -7,42 +7,57 @@ import screen
 pygame.init ()
 pygame.mixer.init ()
 path = os.getcwd()
-images_path = os.path.join(path, "images")  # image
-
-current_dir = os.getcwd()  # 例如: C:\Users\...\PythonProject\str
-
-# 正确拼接路径
-music_path = os.path.join(current_dir, "music", "")
-pygame.mixer.music.load (music_path+'Faster.mp3')
-pygame.mixer.music.play (-1)     #音乐播放
 
 
-#下载图片
-#以及获得按钮图片的位置矩形
-surface = pygame.image.load (images_path + "Surface.jpg").convert()
+current_dir = os.getcwd()
+images_path = os.path.join(current_dir, "images")
+music_path = os.path.join(current_dir, "music")
 
-adventure = pygame.image.load (images_path + 'SelectorScreenAdventure.png').convert_alpha()
-adventure_start = pygame.image.load (images_path + 'SelectorScreenStartAdventure.png').convert_alpha()
-adventure_on = pygame.image.load (images_path + 'SelectorScreenAdventure1.png').convert_alpha()
-adventure_start_on = pygame.image.load (images_path + 'SelectorScreenStartAdventure1.png').convert_alpha()
+# Load music with error handling
+try:
+    pygame.mixer.music.load(os.path.join(music_path, 'Faster.mp3'))
+    pygame.mixer.music.play(-1)
+except pygame.error as e:
+    print(f"Could not load music: {e}")
 
-challenges = pygame.image.load (images_path + 'SelectorScreenChallenges.png').convert_alpha()
-challenges_rect = challenges.get_rect ()
 
-survival = pygame.image.load (images_path + 'SelectorScreenSurvival.png').convert_alpha()
-survival_rect = survival.get_rect ()
+def load_image(path):
+    """Helper function to load images with error handling"""
+    try:
+        return pygame.image.load(path).convert_alpha()
+    except pygame.error as e:
+        print(f"Could not load image {path}: {e}")
+        return pygame.Surface((100, 100))  # Return blank surface if image fails to load
 
-WoodSign1 = pygame.image.load (images_path + 'SelectorScreen_WoodSign1_32.png').convert_alpha()
-WoodSign2_on = pygame.image.load (images_path + 'SelectorScreen_WoodSign2_32_1.png').convert_alpha()
-WoodSign2 = pygame.image.load (images_path + 'SelectorScreen_WoodSign2_32.png').convert_alpha()
-WoodSign3 = pygame.image.load (images_path + 'SelectorScreen_WoodSign3_32.png').convert_alpha()
-WoodSign2_rect = WoodSign2.get_rect ()
+
+# Load images
+surface = load_image(os.path.join(images_path, "interface", "Surface.png"))
+
+# Adventure images
+adventure = load_image(os.path.join(images_path, 'SelectorScreenAdventure.png'))
+adventure_start = load_image(os.path.join(images_path, 'SelectorScreenStartAdventure.png'))
+adventure_on = load_image(os.path.join(images_path, 'SelectorScreenAdventure1.png'))
+adventure_start_on = load_image(os.path.join(images_path, 'SelectorScreenStartAdventure1.png'))
+
+# Other UI elements
+challenges = load_image(os.path.join(images_path, 'SelectorScreenChallenges.png'))
+survival = load_image(os.path.join(images_path, 'SelectorScreenSurvival.png'))
+
+# Wood signs
+WoodSign1 = load_image(os.path.join(images_path, 'SelectorScreen_WoodSign1_32.png'))
+WoodSign2_on = load_image(os.path.join(images_path, 'SelectorScreen_WoodSign2_32_1.png'))
+WoodSign2 = load_image(os.path.join(images_path, 'SelectorScreen_WoodSign2_32.png'))
+WoodSign3 = load_image(os.path.join(images_path, 'SelectorScreen_WoodSign3_32.png'))
+
+# Shadows
+survival_shadow = load_image(os.path.join(images_path, 'SelectorScreen_Shadow_Survival.png'))
+adventure_shadow = load_image(os.path.join(images_path, 'SelectorScreen_Shadow_Adventure.png'))
+challenges_shadow = load_image(os.path.join(images_path, 'SelectorScreen_Shadow_Challenge.png'))
+
+# Set up WoodSign2 rectangle
+WoodSign2_rect = WoodSign2.get_rect()
 WoodSign2_rect.left, WoodSign2_rect.top = 20, 140
 WoodSign2_rect.width, WoodSign2_rect.height = WoodSign2_rect.width - 20, WoodSign2_rect.height - 20
-
-survival_shadow = pygame.image.load (images_path + 'SelectorScreen_Shadow_Survival.png').convert_alpha()
-adventure_shadow = pygame.image.load (images_path + 'SelectorScreen_Shadow_Adventure.png').convert_alpha()
-challenges_shadow = pygame.image.load (images_path + 'SelectorScreen_Shadow_Challenge.png').convert_alpha()
 
 
 def inter (WoodSign_on=None, adventure_on=None, adventure_start_on=None):
