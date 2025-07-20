@@ -22,21 +22,21 @@ class GameButton:   #定义按钮类
     为按下时为 0
     """
     
-    def __init__ (self,button_image1,button_image2 = None,button_rect = (),position = (0,0)):
+    def __init__ (self,button_image1,button_image2,button_rect):
         self.button_image1 = button_image1
         self.button_image2 = button_image2
         self.image = button_image1
         self.image_rect = button_rect
-        self.position = position
         self.button_down = 0
         
     def is_on (self,event):
         if event.type == pygame.MOUSEMOTION:        #检测鼠标是否在按钮上
             for rect in self.image_rect:
                 if rect.collidepoint (event.pos):
-                    self.image = self.button_image2  #如果在绘制另一张图片
-        else:
-            self.image = self.button_image1         #否则绘制原图片
+                    self.image = self.button_image2
+                    break#如果在绘制另一张图片
+            else:
+                self.image = self.button_image1         #否则绘制原图片
     
     def isdown (self, event, button_down=None):
         if event.type == pygame.MOUSEBUTTONDON:
