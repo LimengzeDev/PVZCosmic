@@ -1,5 +1,6 @@
 import pygame
-
+import subprocess
+import os
 name='interface'
 def change_name(new):
     global name
@@ -18,16 +19,18 @@ class GameButton:   #定义按钮类
     用列表的形式上传参数
     button_down为按钮是否按下的状态
     按下时为 1
-    为按下时为 0
+    按下时为 0
     """
     
-    def __init__ (self,button_rect,button_image1,button_image2 = None):
+    def __init__ (self, button_rect, button_image1, button_image2=None):
         self.button_image1 = button_image1
         self.button_image2 = button_image2
         self.image = button_image1
         self.button_rect = button_rect
         self.button_down = 0
-        
+        self.file_to_open = "levelSelector.py"  # 存储要打开的文件路径
+
+
     def is_on (self,event):
         if event.type == pygame.MOUSEMOTION:        #检测鼠标是否在按钮上
             for rect in self.button_rect:
@@ -42,5 +45,17 @@ class GameButton:   #定义按钮类
             for rect in self.button_rect:
                 if rect.collidepoint (event.pos) and button_down == 0:
                     self.button_down = 1
+                    self.open_file()
         else:
             self.button_down = 0
+    def open_file(self):
+        """打开指定的Python文件"""
+        try:
+            # 使用subprocess运行指定的Python文件
+            subprocess.Popen(['python', self.file_to_open])
+            # 或者使用os.system (根据你的系统选择合适的方式)
+            # os.system(f'python {self.file_to_open}')
+        except Exception as e:
+            print(f"无法启动关卡程序: {self.file_to_open}")
+            print(f"错误信息: {e}")
+            
