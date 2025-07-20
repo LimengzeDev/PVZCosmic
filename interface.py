@@ -7,12 +7,12 @@ import screen
 pygame.init ()
 pygame.mixer.init ()
 path = os.getcwd()
-images_path = os.path.join(path, "images")  # image
+images_path = os.path.join(path, "images\\")  # image
 
 current_dir = os.getcwd()  # 例如: C:\Users\...\PythonProject\str
 
 # 正确拼接路径
-music_path = os.path.join(current_dir, "music", "")
+music_path = os.path.join(current_dir, "music\\", "")
 pygame.mixer.music.load (music_path+'Faster.mp3')
 pygame.mixer.music.play (-1)     #音乐播放
 
@@ -36,16 +36,16 @@ WoodSign1 = pygame.image.load (images_path + 'SelectorScreen_WoodSign1_32.png').
 WoodSign2_on = pygame.image.load (images_path + 'SelectorScreen_WoodSign2_32_1.png').convert_alpha()
 WoodSign2 = pygame.image.load (images_path + 'SelectorScreen_WoodSign2_32.png').convert_alpha()
 WoodSign3 = pygame.image.load (images_path + 'SelectorScreen_WoodSign3_32.png').convert_alpha()
-WoodSign2_rect = WoodSign2.get_rect ()
-WoodSign2_rect.left, WoodSign2_rect.top = 20, 140
-WoodSign2_rect.width, WoodSign2_rect.height = WoodSign2_rect.width - 20, WoodSign2_rect.height - 20
+wood_sign2_rect = WoodSign2.get_rect ()
+wood_sign2_rect.left, wood_sign2_rect.top = 20, 140
+wood_sign2_rect.width, wood_sign2_rect.height = wood_sign2_rect.width - 20, wood_sign2_rect.height - 20
 
 survival_shadow = pygame.image.load (images_path + 'SelectorScreen_Shadow_Survival.png').convert_alpha()
 adventure_shadow = pygame.image.load (images_path + 'SelectorScreen_Shadow_Adventure.png').convert_alpha()
 challenges_shadow = pygame.image.load (images_path + 'SelectorScreen_Shadow_Challenge.png').convert_alpha()
 
 
-def inter (WoodSign_on=None, adventure_on=None, adventure_start_on=None):
+def inter ():
     counter = 1          #关卡计数器
     if counter == 1 :
         adv = adventure_start
@@ -55,15 +55,14 @@ def inter (WoodSign_on=None, adventure_on=None, adventure_start_on=None):
         adv_on = adventure_on
         #默认显示
     # noinspection PyStatementEffect
-    WoodSign2
     adv_rect1 = adv.get_rect ()
     adv_rect2 = adv.get_rect ()
     adv_rect1.left, adv_rect1.top = 478, 85
     adv_rect1.width, adv_rect1.height = adv_rect1.width - 9, adv_rect1.height - 70
     adv_rect2.left, adv_rect2.top = 478 + 205, 85 + 74
     adv_rect2.width, adv_rect2.height = 117, 23
-    adv_button = screen.GameButton (adv, adv_on, (adv_rect1, adv_rect2))
-    wood2_button = screen.GameButton (WoodSign2, WoodSign_on, WoodSign2_rect)
+    adv_button = screen.GameButton ((adv_rect1,adv_rect2), adv, adv_on)
+    wood2_button = screen.GameButton ([wood_sign2_rect], WoodSign2, WoodSign2_on)
     
     while True:
         for event in pygame.event.get ():
