@@ -28,7 +28,7 @@ class GameButton:   #定义按钮类
         self.image = button_image1
         self.button_rect = button_rect
         self.button_down = 0
-        self.file_to_open = "levelSelector.py"  # 存储要打开的文件路径
+        self.file_to_open = "levelManager.py"  # 存储要打开的文件路径
 
 
     def is_on (self,event):
