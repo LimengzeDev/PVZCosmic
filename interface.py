@@ -2,6 +2,7 @@ import pygame
 import sys
 import os
 import screen
+import account
 
 
 pygame.init ()
@@ -14,7 +15,6 @@ current_dir = os.getcwd()  # 例如: C:\Users\...\PythonProject\str
 # 正确拼接路径
 music_path = os.path.join(current_dir, "music\\", "")
 pygame.mixer.music.load (music_path+'Faster.mp3')
-pygame.mixer.music.play (-1)     #音乐播放
 
 
 #下载图片
@@ -46,8 +46,8 @@ challenges_shadow = pygame.image.load (images_path + 'SelectorScreen_Shadow_Chal
 
 
 def inter ():
-    counter = 1          #关卡计数器
-    if counter == 1 :
+    pygame.mixer.music.play (-1)  #播放背景音乐
+    if account.counter == 1 :
         adv = adventure_start
         adv_on = adventure_start_on
     else:
@@ -61,24 +61,32 @@ def inter ():
     adv_rect1.width, adv_rect1.height = adv_rect1.width - 9, adv_rect1.height - 70
     adv_rect2.left, adv_rect2.top = 478 + 205, 85 + 74
     adv_rect2.width, adv_rect2.height = 117, 23
-    adv_button = screen.GameButton ((adv_rect1,adv_rect2), adv, adv_on)
-    wood2_button = screen.GameButton ([wood_sign2_rect], WoodSign2, WoodSign2_on)
+    adv_button = screen.GameButton ([adv_rect1,adv_rect2], adv, adv_on, (475,53), (-2,0), command=adv_cmd)
+    wood2_button = screen.GameButton ([wood_sign2_rect], WoodSign2, WoodSign2_on, (10,138), (0,1))
     
     while True:
         for event in pygame.event.get ():
             if event.type == pygame.QUIT:
+                pygame.quit()
                 sys.exit ()
             #鼠标移动事件处理
             adv_button.is_on (event)
             wood2_button.is_on (event)
+            adv_button.isdown(event)
+            wood2_button.isdown(event)
         screen.screen1.blit (surface, (0, 0))
         screen.screen1.blit (WoodSign1, (10, 0))
-        screen.screen1.blit (wood2_button.image, (10, 140))
+        wood2_button.drow()
         screen.screen1.blit (WoodSign3, (10, 200))
         screen.screen1.blit (adventure_shadow, (466, 54))
         screen.screen1.blit (survival_shadow,  (476, 166))
         screen.screen1.blit (challenges_shadow, (481, 255))
-        screen.screen1.blit (adv_button.image, (475, 53))
+        adv_button.drow()
         screen.screen1.blit (survival, (475, 161))
         screen.screen1.blit (challenges, (480, 251))
         pygame.display.flip ()
+
+
+def adv_cmd ():
+    screen.change_name('levelSelector')
+    print('fuck')
