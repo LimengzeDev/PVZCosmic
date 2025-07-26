@@ -61,7 +61,7 @@ def inter ():
     adv_rect1.width, adv_rect1.height = adv_rect1.width - 9, adv_rect1.height - 70
     adv_rect2.left, adv_rect2.top = 478 + 205, 85 + 74
     adv_rect2.width, adv_rect2.height = 117, 23
-    adv_button = screen.GameButton ([adv_rect1,adv_rect2], adv, adv_on, (475,53), (-2,0), command=adv_cmd)
+    adv_button = screen.GameButton ([adv_rect1,adv_rect2], adv, adv_on, (475,53), (-2,0), adv_cmd)
     wood2_button = screen.GameButton ([wood_sign2_rect], WoodSign2, WoodSign2_on, (10,138), (0,1))
     
     while True:
@@ -72,8 +72,10 @@ def inter ():
             #鼠标移动事件处理
             adv_button.is_on (event)
             wood2_button.is_on (event)
+            #鼠标点击事件处理
             adv_button.isdown(event)
             wood2_button.isdown(event)
+        #绘制图片
         screen.screen1.blit (surface, (0, 0))
         screen.screen1.blit (WoodSign1, (10, 0))
         wood2_button.drow()

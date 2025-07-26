@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 class GameEngine:
-    def __init__(self, levels_folder="levels"):
+    def __init__(self, levels_folder="levels_image"):
         pygame.init()
         self.screen = pygame.display.set_mode((880, 600))
         self.clock = pygame.time.Clock()
@@ -24,7 +24,7 @@ class GameEngine:
         self.ChoseCard = ""
         
     def load_all_levels(self):
-        """Load all level JSON files from the levels folder"""
+        """Load all level JSON files from the levels_image folder"""
         for level_file in self.levels_folder.glob("*.json"):
             level_id = level_file.stem.split("_")[-1]
             with open(level_file, "r") as f:

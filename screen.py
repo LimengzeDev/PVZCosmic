@@ -26,7 +26,7 @@ class GameButton:   #定义按钮类
     """
     
     def __init__ (self,
-                  button_rect,
+                  button_rect: list,
                   button_image1: pygame.Surface = None,
                   button_image2: pygame.Surface = None,
                   position = (0, 0),
@@ -56,15 +56,16 @@ class GameButton:   #定义按钮类
                     self.image = self.button_image1         #否则绘制原图片
     
     def isdown (self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN:    #检测按钮是否按下
             for rect in self.button_rect:
                 if rect.collidepoint (event.pos) and event.button == 1:
                     self.image=self.button_image2
                     self.button_down = 1
+                    #按下时图片向下移2像素
                     self.pos = self.position[0] + self.modify[0], self.position[1] + self.modify[1] + 2
                     print("shit")
                     break
-        if event.type == pygame.MOUSEBUTTONUP:
+        if event.type == pygame.MOUSEBUTTONUP:  #在按钮内松开时执行命令
             if event.button == 1 and self.button_down == 1:
                 self.image =self.button_image1
                 self.button_down = 0
@@ -73,6 +74,7 @@ class GameButton:   #定义按钮类
                         if self.command is not None:
                             self.command()
                         self.open_file()
+                        break
 
 
     def open_file(self):
