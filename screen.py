@@ -1,6 +1,5 @@
 import pygame
 import subprocess
-import os
 name='inter'
 def change_name(new):
     global name
@@ -22,7 +21,7 @@ class GameButton:   #定义按钮类
     用列表的形式上传参数
     button_down为按钮是否按下的状态
     按下时为 1
-    按下时为 0
+    未按下时为 0
     """
     
     def __init__ (self,
