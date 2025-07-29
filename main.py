@@ -1,18 +1,16 @@
-from interface import inter
-import levelSelector
 import screen
+from interface import inter
+from levelSelector import selector
 import pygame
 
 pygame.init()
 pygame.mixer.init()
 running: bool = True
 
-print(inter.__name__)
-
-ID = [inter]
+ID = [inter, selector]
 while running:
     for name in ID:
-        if name.__name__ == 'inter':
+        if name.__name__ == screen.name:
             name()
             break
     else:

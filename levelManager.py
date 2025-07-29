@@ -4,6 +4,7 @@ import pygame
 import sys
 from pathlib import Path
 
+
 class GameEngine:
     def __init__(self, levels_folder="levels_image"):
         pygame.init()
@@ -98,6 +99,7 @@ class GameEngine:
         
         # Draw other game elements here
         # (Would implement plant, zombie rendering based on 1000013378.js logic)
+
 
 if __name__ == "__main__":
     game = GameEngine()
