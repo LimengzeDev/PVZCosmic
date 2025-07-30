@@ -45,45 +45,54 @@ challenges_shadow = pygame.image.load(os.path.join(images_path, 'SelectorScreen_
 running: bool = True
 
 
-def inter():
-    global running
-    if account.counter == 1:
-        adv = adventure_start
-        adv_on = adventure_start_on
-    else:
-        adv = adventure
-        adv_on = adventure_on
-        # 默认显示
+if account.counter == 1:
+    adv = adventure_start
+    adv_on = adventure_start_on
+else:
+    adv = adventure
+    adv_on = adventure_on
+    # 默认显示
     # noinspection PyStatementEffect
 
-    def adv_cmd():
-        screen.change_name('selector')
-        pygame.mixer.music.stop()
-        i = 1
-        while i <= 6:
-            adv_button.image = adv
-            adv_button.draw()
-            pygame.display.flip()
-            pygame.time.delay(150)
-            adv_button.image = adv_on
-            adv_button.draw()
-            pygame.display.flip()
-            pygame.time.delay(100)
-            i += 1
-        screen.screen1.fill((0, 0, 0))
+
+def adv_cmd():
+    screen.change_name('selector')
+    # pygame.mixer.music.stop()
+    i = 1
+    # 点击后的动画
+
+    while i <= 6:
+        adv_button.image = adv
+        adv_button.draw()
         pygame.display.flip()
-        global running
-        running = not running
+        pygame.time.delay(125)
+        adv_button.image = adv_on
+        adv_button.draw()
+        pygame.display.flip()
+        pygame.time.delay(125)
+        i += 1
+    adv_button.image = adv
+    screen.screen1.fill((0, 0, 0))
+    pygame.display.flip()
 
-    adv_rect1 = adv.get_rect()
-    adv_rect2 = adv.get_rect()
-    adv_rect1.left, adv_rect1.top = 478, 85
-    adv_rect1.width, adv_rect1.height = adv_rect1.width - 9, adv_rect1.height - 70
-    adv_rect2.left, adv_rect2.top = 478 + 205, 85 + 74
-    adv_rect2.width, adv_rect2.height = 117, 23
-    adv_button = screen.GameButton([adv_rect1, adv_rect2], adv, adv_on, (475, 53), (-2, 0), adv_cmd)
-    wood2_button = screen.GameButton([wood_sign2_rect], WoodSign2, WoodSign2_on, (10, 138), (0, 1))
+    global running
+    running = not running
 
+
+adv_rect1 = adv.get_rect()
+adv_rect2 = adv.get_rect()
+adv_rect1.left, adv_rect1.top = 478, 85
+adv_rect1.width, adv_rect1.height = adv_rect1.width - 9, adv_rect1.height - 70
+adv_rect2.left, adv_rect2.top = 478 + 205, 85 + 74
+adv_rect2.width, adv_rect2.height = 117, 23
+adv_button = screen.GameButton([adv_rect1, adv_rect2], adv, adv_on, (475, 53), (-2, 0), adv_cmd)
+wood2_button = screen.GameButton([wood_sign2_rect], WoodSign2, WoodSign2_on, (10, 138), (0, 1))
+
+
+def inter():
+    pygame.mixer.music.load(os.path.join(music_path, 'Faster.mp3'))
+    global running
+    running = True
     pygame.mixer.music.play(-1)  # 播放背景音乐
     while running:
         for event in pygame.event.get():

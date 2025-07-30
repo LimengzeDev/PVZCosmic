@@ -8,6 +8,8 @@ def change_name(new):
     name = str(new)
 
 
+pygame.init()
+
 size = (900, 600)     # 窗口大小
 screen1 = pygame.display.set_mode(size)
 pygame.display.set_caption("PlantsVsZombies")
@@ -42,7 +44,7 @@ class GameButton:   # 定义按钮类
         self.modify = modify
         self.button_down = 0
         self.command = command
-        self.file_to_open = "levelSelector.py"  # 存储要打开的文件路径
+        self.file_to_open = file  # 存储要打开的文件路径
 
     def is_on(self, event):
         if event.type == pygame.MOUSEMOTION:        # 检测鼠标是否在按钮上
