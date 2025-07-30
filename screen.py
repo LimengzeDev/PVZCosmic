@@ -42,7 +42,7 @@ class GameButton:   # 定义按钮类
         self.modify = modify
         self.button_down = 0
         self.command = command
-        self.file_to_open = file  # 存储要打开的文件路径
+        self.file_to_open = "levelSelector.py"  # 存储要打开的文件路径
 
     def is_on(self, event):
         if event.type == pygame.MOUSEMOTION:        # 检测鼠标是否在按钮上

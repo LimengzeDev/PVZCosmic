@@ -7,42 +7,41 @@ import account
 
 pygame.init()
 pygame.mixer.init()
-path = os.getcwd()
-images_path = os.path.join(path, "images\\")  # image
 
-current_dir = os.getcwd()  # 例如: C:\Users\...\PythonProject\str
+# 获取当前目录并构建资源路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+images_path = os.path.join(current_dir, "images")  # 图片目录
+music_path = os.path.join(current_dir, "music")   # 音乐目录
 
-# 正确拼接路径
-music_path = os.path.join(current_dir, "music\\", "")
-pygame.mixer.music.load(music_path+'Faster.mp3')
+# 加载音乐文件
+pygame.mixer.music.load(os.path.join(music_path, 'Faster.mp3'))
 
+# 加载图片
+# 使用os.path.join确保跨平台兼容性
+surface = pygame.image.load(os.path.join(images_path, "Surface.jpg")).convert()
 
-# 下载图片
-# 以及获得按钮图片的位置矩形
-surface = pygame.image.load(images_path + "Surface.jpg").convert()
+adventure = pygame.image.load(os.path.join(images_path, 'SelectorScreenAdventure.png')).convert_alpha()
+adventure_start = pygame.image.load(os.path.join(images_path, 'SelectorScreenStartAdventure.png')).convert_alpha()
+adventure_on = pygame.image.load(os.path.join(images_path, 'SelectorScreenAdventure1.png')).convert_alpha()
+adventure_start_on = pygame.image.load(os.path.join(images_path, 'SelectorScreenStartAdventure1.png')).convert_alpha()
 
-adventure = pygame.image.load(images_path + 'SelectorScreenAdventure.png').convert_alpha()
-adventure_start = pygame.image.load(images_path + 'SelectorScreenStartAdventure.png').convert_alpha()
-adventure_on = pygame.image.load(images_path + 'SelectorScreenAdventure1.png').convert_alpha()
-adventure_start_on = pygame.image.load(images_path + 'SelectorScreenStartAdventure1.png').convert_alpha()
-
-challenges = pygame.image.load(images_path + 'SelectorScreenChallenges.png').convert_alpha()
+challenges = pygame.image.load(os.path.join(images_path, 'SelectorScreenChallenges.png')).convert_alpha()
 challenges_rect = challenges.get_rect()
 
-survival = pygame.image.load(images_path + 'SelectorScreenSurvival.png').convert_alpha()
+survival = pygame.image.load(os.path.join(images_path, 'SelectorScreenSurvival.png')).convert_alpha()
 survival_rect = survival.get_rect()
 
-WoodSign1 = pygame.image.load(images_path + 'SelectorScreen_WoodSign1_32.png').convert_alpha()
-WoodSign2_on = pygame.image.load(images_path + 'SelectorScreen_WoodSign2_32_1.png').convert_alpha()
-WoodSign2 = pygame.image.load(images_path + 'SelectorScreen_WoodSign2_32.png').convert_alpha()
-WoodSign3 = pygame.image.load(images_path + 'SelectorScreen_WoodSign3_32.png').convert_alpha()
+WoodSign1 = pygame.image.load(os.path.join(images_path, 'SelectorScreen_WoodSign1_32.png')).convert_alpha()
+WoodSign2_on = pygame.image.load(os.path.join(images_path, 'SelectorScreen_WoodSign2_32_1.png')).convert_alpha()
+WoodSign2 = pygame.image.load(os.path.join(images_path, 'SelectorScreen_WoodSign2_32.png')).convert_alpha()
+WoodSign3 = pygame.image.load(os.path.join(images_path, 'SelectorScreen_WoodSign3_32.png')).convert_alpha()
 wood_sign2_rect = WoodSign2.get_rect()
 wood_sign2_rect.left, wood_sign2_rect.top = 20, 140
 wood_sign2_rect.width, wood_sign2_rect.height = wood_sign2_rect.width - 20, wood_sign2_rect.height - 20
 
-survival_shadow = pygame.image.load(images_path + 'SelectorScreen_Shadow_Survival.png').convert_alpha()
-adventure_shadow = pygame.image.load(images_path + 'SelectorScreen_Shadow_Adventure.png').convert_alpha()
-challenges_shadow = pygame.image.load(images_path + 'SelectorScreen_Shadow_Challenge.png').convert_alpha()
+survival_shadow = pygame.image.load(os.path.join(images_path, 'SelectorScreen_Shadow_Survival.png')).convert_alpha()
+adventure_shadow = pygame.image.load(os.path.join(images_path, 'SelectorScreen_Shadow_Adventure.png')).convert_alpha()
+challenges_shadow = pygame.image.load(os.path.join(images_path, 'SelectorScreen_Shadow_Challenge.png')).convert_alpha()
 running: bool = True
 
 

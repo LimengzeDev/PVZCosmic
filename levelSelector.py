@@ -6,12 +6,16 @@ import screen
 pygame.init()
 
 path = os.getcwd()
-images_path = os.path.join(path, "images\\interface\\")
-font_path = os.path.join(path, "font\\TTF TTC(字体安装)\\")     # 字体路径
-screen_title_font = pygame.font.Font(font_path + "方正少儿GBK简体.ttf", 36)
-screen_scenario_font = pygame.font.Font(font_path + "方正少儿GBK简体.ttf", 22)
-screen_level_font = pygame.font.Font(font_path + "方正卡通简体.TTF", 19)
-bg = pygame.image.load(images_path + "Challenge_Background.jpg").convert()
+# 修改路径拼接方式，使用os.path.join并避免硬编码反斜杠
+images_path = os.path.normpath(os.path.join(path, "images", "interface"))
+font_path = os.path.normpath(os.path.join(path, "font"))     # 字体路径
+
+# 字体文件路径使用os.path.join
+screen_title_font = pygame.font.Font(os.path.join(font_path, "方正少儿GBK简体.ttf"), 36)
+screen_scenario_font = pygame.font.Font(os.path.join(font_path, "方正少儿GBK简体.ttf"), 22)
+screen_level_font = pygame.font.Font(os.path.join(font_path, "方正卡通简体.TTF"), 19)
+bg = pygame.image.load(os.path.join(images_path, "Challenge_Background.jpg")).convert()
+
 '''文字转图片'''
 title = screen_title_font.render("冒险模式", True, "black")
 grass = screen_scenario_font.render("草地", True, "green")
