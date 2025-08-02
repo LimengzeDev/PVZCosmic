@@ -57,7 +57,7 @@ else:
 
 def adv_cmd():
     screen.change_name('selector')
-    # pygame.mixer.music.stop()
+    pygame.mixer.music.stop()
     i = 1
     # 点击后的动画
 
@@ -90,7 +90,6 @@ wood2_button = screen.GameButton([wood_sign2_rect], WoodSign2, WoodSign2_on, (10
 
 
 def inter():
-    pygame.mixer.music.load(os.path.join(music_path, 'Faster.mp3'))
     global running
     running = True
     pygame.mixer.music.play(-1)  # 播放背景音乐
