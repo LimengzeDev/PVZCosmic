@@ -9,7 +9,7 @@ This game is a remake of Plants vs. Zombies, with the full name of Plants vs. Zo
 - **Creative Setting**: Blending sci-fi elements, giving plants and zombies a new cosmic backstory, making battles more immersive.
 ## How to run it
 Download the repository archieve and unzip it.
-[Download python here](https://www.python.org/downloads/) and install it.
+[Download Python here](https://www.python.org/downloads/) and install it.
 Then open command prompt or terminal and run this to install Pygame:
 ```
 pip install pygame
