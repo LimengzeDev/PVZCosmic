@@ -16,5 +16,5 @@ python install pygame
 ```
 打开项目文件夹下的main.py即可
 ## 关于项目
-QQ群号：770312168
-[Gitee项目地址](https://gitee.com/limengzecoder/PVZCosmic)
+* QQ群号：770312168
+* [Gitee项目地址](https://gitee.com/limengzecoder/PVZCosmic)
