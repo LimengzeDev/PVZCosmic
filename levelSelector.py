@@ -101,7 +101,7 @@ def selector():
                 # 鼠标移动事件处理
             back_button.is_on(event)
             # 鼠标点击事件处理
-            back_button.isdown(event)
+            back_button.is_click(event)
             if back_button.button_down == 1:
                 back_desk = 723, 569
             else:

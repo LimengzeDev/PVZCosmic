@@ -1,5 +1,6 @@
 import pygame
 import subprocess
+import time
 name = 'inter'
 
 
@@ -56,7 +57,7 @@ class GameButton:   # 定义按钮类
                 if self.button_down == 0:
                     self.image = self.button_image1         # 否则绘制原图片
     
-    def isdown(self, event):
+    def is_click(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:    # 检测按钮是否按下
             for rect in self.button_rect:
                 if rect.collidepoint(event.pos) and event.button == 1:
@@ -105,3 +106,43 @@ class GameButton:   # 定义按钮类
             screen1.blit(self.button_image2, self.pos)
         else:
             pass
+
+
+class GameTimer:
+    """
+    倒计时器类
+    """
+    def __init__(self, duration):
+        """
+        初始化计时器
+        self.duration: 倒计时秒数
+        """
+        self.duration = duration
+        self.start_time = None
+        self.active = False
+
+    def start(self, duration=None):
+        """启动计时器"""
+        if duration is not None:
+            self.duration = duration
+        self.start_time = time.time()
+        self.active = True
+
+    def is_finished(self):
+        """
+        查询计时器是否结束
+        时间到返回True,否则返回False
+        """
+        if not self.active or self.start_time is None:
+            return False
+        elif time.time()-self.start_time >= self.duration:
+            self.active = False
+            return True
+
+    def time_left(self):
+        """返回剩余时间(秒),没开始返回None"""
+        if self.start_time is None:
+            return None
+        else:
+            left = self.duration - (time.time() - self.start_time)
+            return max(0, left)
