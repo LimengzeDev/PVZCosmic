@@ -102,8 +102,8 @@ def inter():
             adv_button.is_on(event)
             wood2_button.is_on(event)
             # 鼠标点击事件处理
-            adv_button.isdown(event)
-            wood2_button.isdown(event)
+            adv_button.is_click(event)
+            wood2_button.is_click(event)
         # 绘制图片
         if running is True:
             screen.screen1.blit(surface, (0, 0))
