@@ -1,4 +1,5 @@
 # PVZCosmic
+<<<<<<< HEAD
 English | [中文](README_CN.md)
 >Crazy Dave sets out on a space adventure to find corn rolls, and Zombie Boss, learning of Dave's space travels, mobilizes his army of zombies to follow him into space.  
 >The war between plants and zombies in space has begun.
@@ -19,3 +20,7 @@ After that,open main.py to run the program.
 ## About the project
 * QQ Group:770312168
 * [Gitee Link](https://gitee.com/limengzecoder/PVZCosmic)
+=======
+# 植物大战僵尸宇宙版
+<img src=http://jspvz.com/html/background/027.jpg></img>
+>>>>>>> 54cf226 (植物僵尸代码开始编写)

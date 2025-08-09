@@ -37,9 +37,11 @@ def back_cmd():
 
 
 # 制作按钮
-back_rect = back.get_rect()
-back_rect.left, back_rect.top = 723, 567
+back_rect = back_image.get_rect()
+back_rect.left, back_rect.top = 700, 565
+
 back_button = screen.GameButton([back_rect], back_image, back_image_on, (700, 565), command=back_cmd)
+
 levels_image: list = []
 grass_day_levels_button: list = []
 for num in nums:
