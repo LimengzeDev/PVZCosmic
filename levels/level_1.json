@@ -1,0 +1,33 @@
+{
+    "PName": ["Peashooter", "SunFlower", "WallNut"],
+    "ZName": ["Zombie", "ConeheadZombie"],
+    "PicArr": [
+        "images/interface/SodRollCap.png",
+        "images/interface/SodRoll.png",
+        "images/interface/background1.jpg",
+        "images/Card/Plants/Peashooter.png",
+        "images/Card/Plants/SunFlower.png",
+        "images/Card/Plants/WallNut.png",
+        "images/Plants/Peashooter/Peashooter.gif",
+        "images/Plants/SunFlower/SunFlower.gif",
+        "images/Plants/WallNut/WallNut.gif",
+        "images/Zombies/Zombie/Zombie.gif",
+        "images/Zombies/ConeheadZombie/ConeheadZombie.gif"
+    ],
+    "backgroundImage": "images/interface/background1.jpg",
+    "SunNum": 15000,
+    "LF": [0, 0, 0, 1, 0, 0],
+    "CanSelectCard": 1,
+    "LevelName": "Level 1-1",
+    "LvlEName": 1,
+    "AudioArr": ["dirt_rise", "plant", "groan"],
+    "AZ": [
+        ["Zombie", 5, 1],
+        ["ConeheadZombie", 2, 3]
+    ],
+    "FlagNum": 4,
+    "FlagToSumNum": {
+        "a1": [3],
+        "a2": [1, 2]
+    }
+}
