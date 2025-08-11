@@ -1,20 +1,41 @@
 {
     "BasicZombie": {
         "health": 100,
-        "speed": 0.5,
+        "speed": -1,
         "damage": 1,
-        "animation": "images/Zombies/Zombie/Zombie.gif"
+        "animations": {
+            "walk": {
+                "path": "images/Zombies/Zombie/Walk",
+                "frames": 22
+            },
+            "attack": {
+                "path": "images/Zombies/Zombie/Attack",
+                "frames": 21
+            },
+            "dead": {
+                "path": "images/Zombies/Zombie/Die",
+                "frames": 10
+            }
+        }
     },
     "ConeheadZombie": {
         "health": 200,
-        "speed": 0.4,
+        "speed": -1,
         "damage": 1,
-        "animation": "images/Zombies/ConeheadZombie/ConeheadZombie.gif"
-    },
-    "BucketheadZombie": {
-        "health": 300,
-        "speed": 0.3,
-        "damage": 1,
-        "animation": "images/Zombies/BucketheadZombie/BucketheadZombie.gif"
+        "animations": {
+            "walk": {
+                "path": "images/Zombies/ConeheadZombie/Walk",
+                "frames": 21
+            },
+            "attack": {
+                "path": "images/Zombies/ConeheadZombie/Attack",
+                "frames": 11
+            },
+            "dead": {
+                "path": "images/Zombies/ConeheadZombie/Die",
+                "frames": 10
+            }
+        }
     }
+   
 }

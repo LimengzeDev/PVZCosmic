@@ -16,7 +16,7 @@
     "SunFlower": {
         "cost": 50,
         "cooldown": 7.5,
-        "health": 100,
+        "health": 1,
         "animation": "images/Plants/SunFlower/SunFlower.gif",
         "card_image": "images/Card/Plants/SunFlower.png"
     },

@@ -6,10 +6,6 @@ from pathlib import Path
 from pygame.locals import *
 from PIL import Image, ImageSequence  # For GIF animation support
 
-# 方便 zombies.py 调用 GameEngine 实例
-game_instance = None
-
-
 class AnimatedSprite:
     def __init__(self, gif_path, position=(0, 0)):
         self.frames = []
@@ -24,6 +20,7 @@ class AnimatedSprite:
         try:
             with Image.open(gif_path) as img:
                 for frame in ImageSequence.Iterator(img):
+                    # Convert PIL image to pygame surface
                     frame = frame.convert("RGBA")
                     pygame_frame = pygame.image.fromstring(
                         frame.tobytes(), frame.size, frame.mode
@@ -31,23 +28,26 @@ class AnimatedSprite:
                     self.frames.append(pygame_frame)
         except Exception as e:
             print(f"Failed to load GIF {gif_path}: {str(e)}")
+            # Create a placeholder surface if loading fails
             placeholder = pygame.Surface((50, 50), pygame.SRCALPHA)
-            placeholder.fill((255, 0, 255, 128))
+            placeholder.fill((255, 0, 255, 128))  # Magenta with alpha
             self.frames = [placeholder]
     
     def update(self, dt):
+        """Update animation frame based on time"""
         self.time_since_last_frame += dt
         if self.time_since_last_frame >= self.animation_speed:
             self.time_since_last_frame = 0
             self.current_frame = (self.current_frame + 1) % len(self.frames)
     
     def get_current_frame(self):
+        """Get current animation frame"""
         return self.frames[self.current_frame]
+
 
 
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):
-        global game_instance
         pygame.init()
         pygame.mixer.init()
         
@@ -55,14 +55,17 @@ class GameEngine:
         pygame.display.set_caption("Plants vs Zombies")
         self.clock = pygame.time.Clock()
         
+        # Path setup
         self.base_dir = Path(__file__).parent
         self.levels_folder = self.base_dir / levels_folder
         self.data_folder = self.base_dir / data_folder
         
+        # Load game data
         self.plants_data = self.load_data_file("plants.json")
         self.zombies_data = self.load_data_file("zombies.json")
         self.loaded_levels = self.load_all_levels()
         
+        # Game state variables
         self.current_level = None
         self.W = 880
         self.H = 600
@@ -81,34 +84,14 @@ class GameEngine:
         self.DraggingPos = (0, 0)
         self.Grid = [[None for _ in range(9)] for _ in range(5)]
         
+        # UI elements
         self.font = pygame.font.SysFont('Arial', 16)
         self.big_font = pygame.font.SysFont('Arial', 24)
         self.last_time = pygame.time.get_ticks()
-        self.card_gray_images = {}
+        self.card_gray_images = {}  # Store grayed-out card images
         self.last_update_time = pygame.time.get_ticks()
-
-        # 设置全局实例
-        game_instance = self
-        self.preload_zombie_resources()
-        
-    def preload_zombie_resources(self):
-        """预加载所有僵尸动画资源"""
-        self.zombie_cache = {}
-        for zombie_type, data in self.zombies_data.items():
-            try:
-                animations = {}
-                for state, state_data in data["animations"].items():
-                    frames = []
-                    base_path = self.base_dir / state_data['path']
-                    for i in range(1, state_data['frames'] + 1):
-                        img_path = base_path / f"{i}.png"
-                        img = pygame.image.load(str(img_path)).convert_alpha()
-                        frames.append(img)
-                    animations[state] = frames
-                self.zombie_cache[zombie_type] = animations
-            except Exception as e:
-                print(f"Failed to preload zombie {zombie_type}: {str(e)}")
     def load_data_file(self, filename):
+        """Load a JSON data file from the data folder"""
         file_path = self.data_folder / filename
         try:
             with open(file_path, "r") as f:
@@ -118,6 +101,7 @@ class GameEngine:
             return {}
     
     def load_all_levels(self):
+        """Load all level JSON files from the levels folder"""
         levels = {}
         for level_file in self.levels_folder.glob("*.json"):
             level_id = level_file.stem.split("_")[-1]
@@ -129,6 +113,7 @@ class GameEngine:
         return levels
     
     def load_level(self, level_id):
+        """Load a specific level by ID"""
         self.current_level = self.loaded_levels.get(str(level_id))
         if self.current_level:
             self.init_level()
@@ -136,14 +121,20 @@ class GameEngine:
         return False
     
     def init_level(self):
+        """Initialize level based on loaded data"""
+        # Set up level properties from JSON
         self.PName = self.current_level.get("PName", [])
         self.ZName = self.current_level.get("ZName", [])
         self.LevelName = self.current_level.get("LevelName", "Level")
         self.SunNum = self.current_level.get("SunNum", 50)
         
+        # Initialize plant cards
         self.init_plant_cards()
+        
+        # Load card images
         self.load_card_images()
         
+        # Set background
         bg_path = self.current_level.get("backgroundImage", "images/interface/background1.jpg")
         try:
             self.background = pygame.image.load(str(self.base_dir / bg_path))
@@ -153,6 +144,7 @@ class GameEngine:
             self.background.fill((100, 200, 100))
     
     def init_plant_cards(self):
+        """Initialize plant cards for selection with cooldown states"""
         self.ArCard = []
         self.ArPCard = {}
         
@@ -175,6 +167,7 @@ class GameEngine:
             self.ArPCard[plant_type] = card_data
     
     def load_card_images(self):
+        """Load card images and create grayed-out versions for cooldown state"""
         self.card_images = {}
         self.card_gray_images = {}
         
@@ -182,31 +175,52 @@ class GameEngine:
             if plant_type in self.PName:
                 try:
                     img_path = self.base_dir / plant_data["card_image"]
+                    # Load normal card image
                     normal_img = pygame.image.load(str(img_path)).convert_alpha()
                     self.card_images[plant_type] = normal_img
+                    
+                    # Create grayed-out version for cooldown
                     gray_img = self.convert_to_grayscale(normal_img.copy())
                     self.card_gray_images[plant_type] = gray_img
+                    
                 except Exception as e:
                     print(f"Failed to load card image for {plant_type}: {str(e)}")
+                    # Create placeholders
                     placeholder = pygame.Surface((70, 90), pygame.SRCALPHA)
                     placeholder.fill((200, 100, 100, 128))
                     self.card_images[plant_type] = placeholder
                     self.card_gray_images[plant_type] = self.convert_to_grayscale(placeholder.copy())
 
     def convert_to_grayscale(self, surface):
+        """Convert a surface to grayscale while preserving alpha"""
         gray_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         for x in range(surface.get_width()):
             for y in range(surface.get_height()):
                 r, g, b, a = surface.get_at((x, y))
+                # Calculate grayscale value (luminosity method)
                 gray = int(0.21 * r + 0.72 * g + 0.07 * b)
                 gray_surface.set_at((x, y), (gray, gray, gray, a))
         return gray_surface
 
+    
+        
+        # Update cooldowns for all cards
+        for card in self.ArCard:
+            if card["Cooldown"] > 0:
+                card["Cooldown"] = max(0, card["Cooldown"] - delta)
+                card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
+            
+            card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
+
+
+    
     def create_plant(self, plant_type, position):
+        """Create a new plant using data from plants.json"""
         plant_data = self.plants_data.get(plant_type, {})
         if not plant_data:
             print(f"Plant type {plant_type} not found in plants.json")
             return None
+            
         try:
             anim_path = self.base_dir / plant_data["animation"]
             anim = AnimatedSprite(str(anim_path))
@@ -222,181 +236,213 @@ class GameEngine:
             return None
     
     def create_zombie(self, zombie_type, position):
+        """Create a new zombie using data from zombies.json"""
         zombie_data = self.zombies_data.get(zombie_type, {})
         if not zombie_data:
             print(f"Zombie type {zombie_type} not found in zombies.json")
             return None
+            
         try:
-            animations = {}
-            for state, state_data in zombie_data["animations"].items():
-                frames = []
-                base_path = self.base_dir / state_data['path']
-                for i in range(1, state_data['frames'] + 1):
-                    img_path = base_path / f"{i}.png"
-                    frames.append(pygame.image.load(str(img_path)).convert_alpha())
-                animations[state] = frames
-            from zombies import Zombie
-            line = (position[1] - 120) // 100 + 1
-            zombie_obj = Zombie(animations, line=line, bg=self.screen, start_x=position[0])
-            zombie_obj.hp = zombie_data.get('health', zombie_obj.MAX_HP)
-            zombie_obj.speed = zombie_data.get('speed', zombie_obj.BASE_SPEED)
-            return zombie_obj
+            anim_path = self.base_dir / zombie_data["animation"]
+            anim = AnimatedSprite(str(anim_path))
+            return {
+                "type": zombie_type,
+                "position": position,
+                "anim": anim,
+                "health": zombie_data.get("health", 100),
+                "speed": zombie_data.get("speed", 0.5),
+                "damage": zombie_data.get("damage", 1)
+            }
         except Exception as e:
             print(f"Failed to create zombie {zombie_type}: {str(e)}")
             return None
 
-    def handle_mouse_down(self, pos):
-        """处理鼠标按下事件，开始拖动卡片"""
-        for card in self.ArCard:
-            if card["Rect"].collidepoint(pos) and card["CDReady"] and card["SunReady"]:
-                self.DraggingCard = card
-                self.DraggingPos = pos
-                return True
-        return False
 
-    def handle_mouse_move(self, pos):
-        """处理鼠标移动事件，更新拖动位置"""
-        if self.DraggingCard:
-            # 更新拖动位置
-            dx = pos[0] - self.DraggingPos[0]
-            dy = pos[1] - self.DraggingPos[1]
-            self.DraggingPos = pos
-            return True
-        return False
-
-    def handle_mouse_up(self, pos):
-        """处理鼠标释放事件，放置植物"""
-        if not self.DraggingCard:
-            return False
-
-        # 检查是否放置在草坪上 (y坐标在120-520之间)
-        if 120 <= pos[1] <= 520:
-            # 计算网格位置
-            col = (pos[0] - 70) // 80
-            row = (pos[1] - 120) // 100
-            
-            # 确保在网格范围内
-            if 0 <= row < 5 and 0 <= col < 9:
-                # 检查该位置是否已有植物
-                if self.Grid[row][col] is None:
-                    # 扣除阳光
-                    self.SunNum -= self.DraggingCard["Cost"]
-                    # 设置冷却时间
-                    self.DraggingCard["Cooldown"] = self.DraggingCard["MaxCooldown"]
-                    self.DraggingCard["CDReady"] = 0
-                    
-                    # 创建植物
-                    plant_x = 70 + col * 80 + 10
-                    plant_y = 120 + row * 100 + 10
-                    plant = self.create_plant(self.DraggingCard["PName"], (plant_x, plant_y))
-                    if plant:
-                        plant_id = f"plant_{len(self.Plants)}"
-                        self.Plants[plant_id] = plant
-                        self.Grid[row][col] = plant_id
-
-        self.DraggingCard = None
-        return True
-
+    
     def run(self):
+        """Main game loop"""
         running = True
         while running:
             current_time = pygame.time.get_ticks()
-            dt = (current_time - self.last_time) / 1000.0
+            dt = (current_time - self.last_time) / 1000.0  # Delta time in seconds
             self.last_time = current_time
             
             for event in pygame.event.get():
                 if event.type == QUIT:
                     running = False
                 elif event.type == MOUSEBUTTONDOWN:
-                    if event.button == 1:  # 左键点击
-                        self.handle_mouse_down(event.pos)
-                elif event.type == MOUSEMOTION:
-                    if event.buttons[0]:  # 左键拖动
-                        self.handle_mouse_move(event.pos)
+                    self.handle_mouse_down(event)
                 elif event.type == MOUSEBUTTONUP:
-                    if event.button == 1:  # 左键释放
-                        self.handle_mouse_up(event.pos)
+                    self.handle_mouse_up(event)
+                elif event.type == MOUSEMOTION and self.DraggingCard:
+                    self.handle_mouse_motion(event)
             
+            # Update game state
             self.update(dt)
-            self.render()
             
-            # 渲染拖动的卡片
-            if self.DraggingCard:
-                mouse_pos = pygame.mouse.get_pos()
-                img = self.card_images[self.DraggingCard["PName"]]
-                self.screen.blit(img, (mouse_pos[0] - 35, mouse_pos[1] - 45))
+            # Render
+            self.render()
             
             pygame.display.flip()
             self.clock.tick(60)
         
         pygame.quit()
         sys.exit()
-
+    
+    def handle_mouse_down(self, event):
+        """Handle mouse click events"""
+        if event.button == 1:  # Left click
+            # Check plant cards
+            for card in self.ArCard:
+                if card["Rect"].collidepoint(event.pos):
+                    self.DraggingCard = card
+                    self.DraggingPos = event.pos
+                    break
+            
+            # Check battlefield grid
+            if not self.DraggingCard and self.ChoseCard:
+                row, col = self.get_grid_position(event.pos)
+                if 0 <= row < 5 and 0 <= col < 9:
+                    self.plant_selected(row, col)
+    
+    def handle_mouse_up(self, event):
+        """Handle mouse release events"""
+        if self.DraggingCard:
+            # Check if dropped on battlefield
+            row, col = self.get_grid_position(event.pos)
+            if 0 <= row < 5 and 0 <= col < 9:
+                self.plant_selected(row, col)
+            
+            self.DraggingCard = None
+    
+    def handle_mouse_motion(self, event):
+        """Handle mouse movement while dragging"""
+        if self.DraggingCard:
+            self.DraggingPos = event.pos
+    
+    def get_grid_position(self, pos):
+        """Convert screen position to grid coordinates"""
+        x, y = pos
+        col = (x - 220) // 80 if x > 220 else -1
+        row = (y - 120) // 100 if y > 120 else -1
+        return row, col
+    
+    def plant_selected(self, row, col):
+        """Plant a card at specified grid position and trigger cooldown"""
+        if self.DraggingCard and not self.Grid[row][col]:
+            plant_type = self.DraggingCard["PName"]
+            plant_cost = self.DraggingCard["Cost"]
+            
+            if self.SunNum >= plant_cost:
+                self.SunNum -= plant_cost
+                plant = self.create_plant(plant_type, (220 + col * 80, 120 + row * 100))
+                if plant:
+                    # Trigger cooldown for this card
+                    self.DraggingCard["Cooldown"] = self.DraggingCard["MaxCooldown"]
+                    self.DraggingCard["CDReady"] = 0
+                    plant_id = f"plant_{row}_{col}"
+                    self.Plants[plant_id] = plant
+                    self.Grid[row][col] = plant_id
+                    print(f"Planted {plant_type} at {row},{col}")
+    
     def update(self, dt):
+        """Update game logic with delta time including card cooldowns"""
         current_time = pygame.time.get_ticks()
         delta = (current_time - self.last_update_time) / 1000.0
         self.last_update_time = current_time
         
+        # Update cooldowns for all cards
         for card in self.ArCard:
             if card["Cooldown"] > 0:
                 card["Cooldown"] = max(0, card["Cooldown"] - delta)
                 card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
+            
             card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
-
+        """Update game logic with delta time"""
+        # Update plant animations
         for plant_id, plant in self.Plants.items():
             plant["anim"].update(dt)
-
-        for zombie_id, zombie in list(self.Zombies.items()):
-            if hasattr(zombie, "update"):
-                zombie.update()
-
+        
+        # Update zombie animations
+        for zombie_id, zombie in self.Zombies.items():
+            zombie["anim"].update(dt)
+        
+        # Spawn zombies based on level configuration
         self.spawn_zombies()
-
+    
     def spawn_zombies(self):
-        if not hasattr(self, 'last_spawn_time'):
+        """Spawn zombies based on level configuration"""
+        if not hasattr(self, "last_spawn_time"):
             self.last_spawn_time = pygame.time.get_ticks()
+        
         current_time = pygame.time.get_ticks()
-        if current_time - self.last_spawn_time > 5000:
+        if current_time - self.last_spawn_time > 5000:  # Spawn every 5 seconds
             self.last_spawn_time = current_time
-            if self.current_level and 'AZ' in self.current_level:
-                for zombie_data in self.current_level['AZ']:
+            
+            if self.current_level and "AZ" in self.current_level:
+                for zombie_data in self.current_level["AZ"]:
                     zombie_type, count, row = zombie_data
                     for _ in range(count):
                         zombie = self.create_zombie(zombie_type, (850, 120 + row * 100))
                         if zombie:
-                            zombie_id = f'zombie_{len(self.Zombies)}'
+                            zombie_id = f"zombie_{len(self.Zombies)}"
                             self.Zombies[zombie_id] = zombie
-
+    
     def render(self):
+        """Render game elements with card state awareness"""
+        # Draw background
         self.screen.blit(self.background, (0, 0))
         
+        # Draw plant cards with state awareness
         for card in self.ArCard:
             plant_type = card["PName"]
             if plant_type in self.card_images:
+                # Select image based on card state
                 if card["CDReady"] and card["SunReady"]:
-                    img = self.card_images[plant_type]
+                    img = self.card_images[plant_type]  # Normal colored
                 else:
-                    img = self.card_gray_images[plant_type]
+                    img = self.card_gray_images[plant_type]  # Grayed out
+                    
+                self.screen.blit(img, card["Rect"])
                 
-                # 如果不是正在拖动的卡片才渲染
-                if card != self.DraggingCard:
-                    self.screen.blit(img, card["Rect"])
-                    cost_text = self.font.render(str(card["Cost"]), True, 
-                        (255, 255, 0) if card["SunReady"] else (150, 150, 150))
-                    self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
-
+                # Draw cost text
+                cost_text = self.font.render(str(card["Cost"]), True, 
+                    (255, 255, 0) if card["SunReady"] else (150, 150, 150))
+                self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
+        
+        # Draw dragging card
+        if self.DraggingCard and self.DraggingCard["PName"] in self.card_images:
+            self.screen.blit(
+                self.card_images[self.DraggingCard["PName"]],
+                (self.DraggingPos[0] - 35, self.DraggingPos[1] - 45)
+            )
+        
+        # Draw plants with animations
         for plant_id, plant in self.Plants.items():
             frame = plant["anim"].get_current_frame()
             self.screen.blit(frame, plant["position"])
-
+        
+        # Draw zombies with animations
         for zombie_id, zombie in self.Zombies.items():
-            if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
-                self.screen.blit(zombie.image, zombie.rect)
+            frame = zombie["anim"].get_current_frame()
+            self.screen.blit(frame, zombie["position"])
 
 
 if __name__ == "__main__":
+    # Check for required packages
+    try:
+        import PIL
+    except ImportError:
+        print("Please install Pillow for GIF support: pip install pillow")
+        sys.exit(1)
+    
+    # Ensure the levels folder exists
+    if not os.path.exists("levels"):
+        os.makedirs("levels")
+        print("Created 'levels' directory - please add your level JSON files here")
+    
     game = GameEngine()
-    if game.load_level("1"):
+    if game.load_level("1"):  # Load level 1
         game.run()
     else:
-        print(f"Failed to load level 1.")
+        print(f"Failed to load level 1. Please ensure levels/level_1.json exists")
