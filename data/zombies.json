@@ -1,0 +1,20 @@
+{
+    "BasicZombie": {
+        "health": 100,
+        "speed": 0.5,
+        "damage": 1,
+        "animation": "images/Zombies/Zombie/Zombie.gif"
+    },
+    "ConeheadZombie": {
+        "health": 200,
+        "speed": 0.4,
+        "damage": 1,
+        "animation": "images/Zombies/ConeheadZombie/ConeheadZombie.gif"
+    },
+    "BucketheadZombie": {
+        "health": 300,
+        "speed": 0.3,
+        "damage": 1,
+        "animation": "images/Zombies/BucketheadZombie/BucketheadZombie.gif"
+    }
+}

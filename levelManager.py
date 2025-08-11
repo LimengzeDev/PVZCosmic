@@ -44,20 +44,29 @@ class AnimatedSprite:
         """Get current animation frame"""
         return self.frames[self.current_frame]
 
+
+
 class GameEngine:
-    def __init__(self, levels_folder="levels"):
+    def __init__(self, levels_folder="levels", data_folder="data"):
         pygame.init()
         pygame.mixer.init()
         
         self.screen = pygame.display.set_mode((880, 600))
         pygame.display.set_caption("Plants vs Zombies")
         self.clock = pygame.time.Clock()
-        self.levels_folder = Path(levels_folder)
-        self.current_level = None
-        self.loaded_levels = {}
-        self.load_all_levels()
+        
+        # Path setup
+        self.base_dir = Path(__file__).parent
+        self.levels_folder = self.base_dir / levels_folder
+        self.data_folder = self.base_dir / data_folder
+        
+        # Load game data
+        self.plants_data = self.load_data_file("plants.json")
+        self.zombies_data = self.load_data_file("zombies.json")
+        self.loaded_levels = self.load_all_levels()
         
         # Game state variables
+        self.current_level = None
         self.W = 880
         self.H = 600
         self.C = 9
@@ -69,28 +78,39 @@ class GameEngine:
         self.ArCard = []
         self.ArPCard = {}
         self.ArSun = []
-        self.Plants = {}  # {plant_id: {"type": str, "position": tuple, "anim": AnimatedSprite}}
-        self.Zombies = {}  # {zombie_id: {"type": str, "position": tuple, "anim": AnimatedSprite}}
+        self.Plants = {}
+        self.Zombies = {}
         self.DraggingCard = None
         self.DraggingPos = (0, 0)
-        self.Grid = [[None for _ in range(9)] for _ in range(5)]  # 5 rows, 9 columns
+        self.Grid = [[None for _ in range(9)] for _ in range(5)]
         
         # UI elements
         self.font = pygame.font.SysFont('Arial', 16)
         self.big_font = pygame.font.SysFont('Arial', 24)
-        
-        # Base directory for assets (relative to script location)
-        self.base_dir = Path(__file__).parent
-        
-        # For tracking animation time
         self.last_time = pygame.time.get_ticks()
+        self.card_gray_images = {}  # Store grayed-out card images
+        self.last_update_time = pygame.time.get_ticks()
+    def load_data_file(self, filename):
+        """Load a JSON data file from the data folder"""
+        file_path = self.data_folder / filename
+        try:
+            with open(file_path, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Failed to load {filename}: {str(e)}")
+            return {}
     
     def load_all_levels(self):
         """Load all level JSON files from the levels folder"""
+        levels = {}
         for level_file in self.levels_folder.glob("*.json"):
             level_id = level_file.stem.split("_")[-1]
-            with open(level_file, "r") as f:
-                self.loaded_levels[level_id] = json.load(f)
+            try:
+                with open(level_file, "r") as f:
+                    levels[level_id] = json.load(f)
+            except Exception as e:
+                print(f"Failed to load level {level_file}: {str(e)}")
+        return levels
     
     def load_level(self, level_id):
         """Load a specific level by ID"""
@@ -105,122 +125,139 @@ class GameEngine:
         # Set up level properties from JSON
         self.PName = self.current_level.get("PName", [])
         self.ZName = self.current_level.get("ZName", [])
-        self.PicArr = self.current_level.get("PicArr", [])
-        self.LF = self.current_level.get("LF", [0, 1, 1, 1, 1, 1])
-        self.CanSelectCard = self.current_level.get("CanSelectCard", 1)
         self.LevelName = self.current_level.get("LevelName", "Level")
-        self.AudioArr = self.current_level.get("AudioArr", [])
         self.SunNum = self.current_level.get("SunNum", 50)
         
         # Initialize plant cards
         self.init_plant_cards()
         
-        # Load assets
-        self.load_assets()
+        # Load card images
+        self.load_card_images()
         
-    def init_plant_cards(self):
-        """Initialize plant cards for selection"""
-        self.ArCard = []
-        self.ArPCard = {}
-        
-        for i, plant in enumerate(self.PName):
-            # Card images are PNGs, plant animations are GIFs
-            card_img_path = f"images/Card/Plants/{plant}.png"
-            plant_data = {
-                "DID": f"Card{plant}",
-                "CDReady": 0,
-                "SunReady": 1,
-                "PName": plant,
-                "Index": i,
-                "Rect": pygame.Rect(80 + i * 70, 10, 70, 90),
-                "Cost": self.get_plant_cost(plant),
-                "ImgPath": card_img_path
-            }
-            self.ArCard.append(plant_data)
-            self.ArPCard[plant] = plant_data
-    
-    def get_plant_cost(self, plant_type):
-        """Return sun cost for different plant types"""
-        costs = {
-            "Peashooter": 100,
-            "SunFlower": 50,
-            "WallNut": 50,
-            "CherryBomb": 150,
-            "PotatoMine": 25
-        }
-        return costs.get(plant_type, 100)
-    
-    def load_assets(self):
-        """Load images and audio for current level"""
-        # Load static images from PicArr paths
-        self.images = {}
-        for img_path in self.PicArr:
-            try:
-                full_path = self.base_dir / img_path
-                if img_path.endswith(".gif"):
-                    # We'll load GIFs as animated sprites when needed
-                    continue
-                self.images[img_path] = pygame.image.load(str(full_path))
-            except Exception as e:
-                print(f"Failed to load image {img_path}: {str(e)}")
-                
         # Set background
         bg_path = self.current_level.get("backgroundImage", "images/interface/background1.jpg")
         try:
-            full_bg_path = self.base_dir / bg_path
-            self.background = pygame.image.load(str(full_bg_path))
+            self.background = pygame.image.load(str(self.base_dir / bg_path))
         except Exception as e:
             print(f"Failed to load background {bg_path}: {str(e)}")
             self.background = pygame.Surface((880, 600))
             self.background.fill((100, 200, 100))
+    
+    def init_plant_cards(self):
+        """Initialize plant cards for selection with cooldown states"""
+        self.ArCard = []
+        self.ArPCard = {}
         
-        # Load card images (static PNGs)
+        for i, plant_type in enumerate(self.PName):
+            plant_data = self.plants_data.get(plant_type, {})
+            card_data = {
+                "DID": f"Card{plant_type}",
+                "PName": plant_type,
+                "Index": i,
+                "Rect": pygame.Rect(80 + i * 70, 10, 70, 90),
+                "Cost": plant_data.get("cost", 100),
+                "MaxCooldown": plant_data.get("cooldown", 7.5),
+                "Cooldown": 0,
+                "CDReady": 1,
+                "SunReady": 1,
+                "Cooling": False,
+                "ImgPath": plant_data.get("card_image", "")
+            }
+            self.ArCard.append(card_data)
+            self.ArPCard[plant_type] = card_data
+    
+    def load_card_images(self):
+        """Load card images and create grayed-out versions for cooldown state"""
         self.card_images = {}
-        for plant in self.PName:
-            card_path = f"images/Card/Plants/{plant}.png"
-            try:
-                full_card_path = self.base_dir / card_path
-                self.card_images[plant] = pygame.image.load(str(full_card_path))
-            except Exception as e:
-                print(f"Failed to load card image {card_path}: {str(e)}")
-                self.card_images[plant] = pygame.Surface((70, 90))
-                self.card_images[plant].fill((200, 100, 100))
+        self.card_gray_images = {}
+        
+        for plant_type, plant_data in self.plants_data.items():
+            if plant_type in self.PName:
+                try:
+                    img_path = self.base_dir / plant_data["card_image"]
+                    # Load normal card image
+                    normal_img = pygame.image.load(str(img_path)).convert_alpha()
+                    self.card_images[plant_type] = normal_img
+                    
+                    # Create grayed-out version for cooldown
+                    gray_img = self.convert_to_grayscale(normal_img.copy())
+                    self.card_gray_images[plant_type] = gray_img
+                    
+                except Exception as e:
+                    print(f"Failed to load card image for {plant_type}: {str(e)}")
+                    # Create placeholders
+                    placeholder = pygame.Surface((70, 90), pygame.SRCALPHA)
+                    placeholder.fill((200, 100, 100, 128))
+                    self.card_images[plant_type] = placeholder
+                    self.card_gray_images[plant_type] = self.convert_to_grayscale(placeholder.copy())
+
+    def convert_to_grayscale(self, surface):
+        """Convert a surface to grayscale while preserving alpha"""
+        gray_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        for x in range(surface.get_width()):
+            for y in range(surface.get_height()):
+                r, g, b, a = surface.get_at((x, y))
+                # Calculate grayscale value (luminosity method)
+                gray = int(0.21 * r + 0.72 * g + 0.07 * b)
+                gray_surface.set_at((x, y), (gray, gray, gray, a))
+        return gray_surface
+
+    
+        
+        # Update cooldowns for all cards
+        for card in self.ArCard:
+            if card["Cooldown"] > 0:
+                card["Cooldown"] = max(0, card["Cooldown"] - delta)
+                card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
+            
+            card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
+
+
     
     def create_plant(self, plant_type, position):
-        """Create a new plant with animation"""
-        plant_gif_path = f"images/Plants/{plant_type}/{plant_type}.gif"
-        full_path = self.base_dir / plant_gif_path
-        
-        if not full_path.exists():
-            print(f"Plant animation not found: {plant_gif_path}")
+        """Create a new plant using data from plants.json"""
+        plant_data = self.plants_data.get(plant_type, {})
+        if not plant_data:
+            print(f"Plant type {plant_type} not found in plants.json")
             return None
             
-        anim = AnimatedSprite(str(full_path))
-        return {
-            "type": plant_type,
-            "position": position,
-            "anim": anim,
-            "cooldown": 0,
-            "health": 100
-        }
+        try:
+            anim_path = self.base_dir / plant_data["animation"]
+            anim = AnimatedSprite(str(anim_path))
+            return {
+                "type": plant_type,
+                "position": position,
+                "anim": anim,
+                "health": plant_data.get("health", 100),
+                "cooldown": 0
+            }
+        except Exception as e:
+            print(f"Failed to create plant {plant_type}: {str(e)}")
+            return None
     
     def create_zombie(self, zombie_type, position):
-        """Create a new zombie with animation"""
-        zombie_gif_path = f"images/Zombies/{zombie_type}/{zombie_type}.gif"
-        full_path = self.base_dir / zombie_gif_path
-        
-        if not full_path.exists():
-            print(f"Zombie animation not found: {zombie_gif_path}")
+        """Create a new zombie using data from zombies.json"""
+        zombie_data = self.zombies_data.get(zombie_type, {})
+        if not zombie_data:
+            print(f"Zombie type {zombie_type} not found in zombies.json")
             return None
             
-        anim = AnimatedSprite(str(full_path))
-        return {
-            "type": zombie_type,
-            "position": position,
-            "anim": anim,
-            "speed": 0.5,
-            "health": 100
-        }
+        try:
+            anim_path = self.base_dir / zombie_data["animation"]
+            anim = AnimatedSprite(str(anim_path))
+            return {
+                "type": zombie_type,
+                "position": position,
+                "anim": anim,
+                "health": zombie_data.get("health", 100),
+                "speed": zombie_data.get("speed", 0.5),
+                "damage": zombie_data.get("damage", 1)
+            }
+        except Exception as e:
+            print(f"Failed to create zombie {zombie_type}: {str(e)}")
+            return None
+
+
     
     def run(self):
         """Main game loop"""
@@ -291,7 +328,7 @@ class GameEngine:
         return row, col
     
     def plant_selected(self, row, col):
-        """Plant a card at the specified grid position"""
+        """Plant a card at specified grid position and trigger cooldown"""
         if self.DraggingCard and not self.Grid[row][col]:
             plant_type = self.DraggingCard["PName"]
             plant_cost = self.DraggingCard["Cost"]
@@ -300,12 +337,27 @@ class GameEngine:
                 self.SunNum -= plant_cost
                 plant = self.create_plant(plant_type, (220 + col * 80, 120 + row * 100))
                 if plant:
+                    # Trigger cooldown for this card
+                    self.DraggingCard["Cooldown"] = self.DraggingCard["MaxCooldown"]
+                    self.DraggingCard["CDReady"] = 0
                     plant_id = f"plant_{row}_{col}"
                     self.Plants[plant_id] = plant
                     self.Grid[row][col] = plant_id
                     print(f"Planted {plant_type} at {row},{col}")
     
     def update(self, dt):
+        """Update game logic with delta time including card cooldowns"""
+        current_time = pygame.time.get_ticks()
+        delta = (current_time - self.last_update_time) / 1000.0
+        self.last_update_time = current_time
+        
+        # Update cooldowns for all cards
+        for card in self.ArCard:
+            if card["Cooldown"] > 0:
+                card["Cooldown"] = max(0, card["Cooldown"] - delta)
+                card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
+            
+            card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
         """Update game logic with delta time"""
         # Update plant animations
         for plant_id, plant in self.Plants.items():
@@ -337,19 +389,25 @@ class GameEngine:
                             self.Zombies[zombie_id] = zombie
     
     def render(self):
-        """Render game elements"""
+        """Render game elements with card state awareness"""
         # Draw background
         self.screen.blit(self.background, (0, 0))
         
-        # Draw sun counter
-        sun_text = self.big_font.render(str(self.SunNum), True, (0, 0, 0))
-        self.screen.blit(sun_text, (70, 30))
-        
-        # Draw plant cards
+        # Draw plant cards with state awareness
         for card in self.ArCard:
-            if card["PName"] in self.card_images:
-                self.screen.blit(self.card_images[card["PName"]], card["Rect"])
-                cost_text = self.font.render(str(card["Cost"]), True, (255, 255, 0))
+            plant_type = card["PName"]
+            if plant_type in self.card_images:
+                # Select image based on card state
+                if card["CDReady"] and card["SunReady"]:
+                    img = self.card_images[plant_type]  # Normal colored
+                else:
+                    img = self.card_gray_images[plant_type]  # Grayed out
+                    
+                self.screen.blit(img, card["Rect"])
+                
+                # Draw cost text
+                cost_text = self.font.render(str(card["Cost"]), True, 
+                    (255, 255, 0) if card["SunReady"] else (150, 150, 150))
                 self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
         
         # Draw dragging card

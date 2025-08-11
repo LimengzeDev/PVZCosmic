@@ -1,0 +1,44 @@
+{
+    "Peashooter": {
+        "cost": 100,
+        "cooldown": 7.5,
+        "health": 100,
+        "animation": "images/Plants/Jalapeno/Jalapeno.gif",
+        "card_image": "images/Card/Plants/Peashooter.png"
+    },
+    "Jalapeno": {
+        "cost":200,
+        "cooldown":9,
+        "health":10,
+        "animation":"images/Plants/Jalapeno/JalapenoAttack.gif",
+        "card_image":"images/Card/Plants/Jalapeno.png"
+    },
+    "SunFlower": {
+        "cost": 50,
+        "cooldown": 7.5,
+        "health": 100,
+        "animation": "images/Plants/SunFlower/SunFlower.gif",
+        "card_image": "images/Card/Plants/SunFlower.png"
+    },
+    "WallNut": {
+        "cost": 50,
+        "cooldown": 30,
+        "health": 400,
+        "animation": "images/Plants/WallNut/WallNut.gif",
+        "card_image": "images/Card/Plants/WallNut.png"
+    },
+    "CherryBomb": {
+        "cost": 150,
+        "cooldown": 30,
+        "health": 100,
+        "animation": "images/Plants/CherryBomb/CherryBomb.gif",
+        "card_image": "images/Card/Plants/CherryBomb.png"
+    },
+    "PotatoMine": {
+        "cost": 25,
+        "cooldown": 15,
+        "health": 100,
+        "animation": "images/Plants/PotatoMine/PotatoMine.gif",
+        "card_image": "images/Card/Plants/PotatoMine.png"
+    }
+}
