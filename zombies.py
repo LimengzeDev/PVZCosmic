@@ -2,6 +2,7 @@ import pygame
 from screen import GameTimer, screen1
 import weakref
 
+
 class Zombie(pygame.sprite.Sprite):
     MAX_HP = 270.0
     BASE_SPEED = 0.6  # negative for moving left
