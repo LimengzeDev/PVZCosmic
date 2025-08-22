@@ -9,7 +9,6 @@ from PIL import Image, ImageSequence  # For GIF animation support
 # 方便 zombies.py 调用 GameEngine 实例
 game_instance = None
 
-
 class AnimatedSprite:
     def __init__(self, gif_path, position=(0, 0)):
         self.frames = []
@@ -18,6 +17,7 @@ class AnimatedSprite:
         self.time_since_last_frame = 0
         self.position = position
         self.load_gif(gif_path)
+        self.last_update_time = pygame.time.get_ticks()
 
     def load_gif(self, gif_path):
         """Load GIF animation using PIL and convert to pygame surfaces"""
@@ -36,6 +36,7 @@ class AnimatedSprite:
             self.frames = [placeholder]
 
     def update(self, dt):
+        """Update animation frames"""
         self.time_since_last_frame += dt
         if self.time_since_last_frame >= self.animation_speed:
             self.time_since_last_frame = 0
@@ -43,7 +44,6 @@ class AnimatedSprite:
 
     def get_current_frame(self):
         return self.frames[self.current_frame]
-
 
 def get_up_pos(event):
     """
@@ -56,7 +56,6 @@ def get_up_pos(event):
             return event.pos[0] // 85 + 1, event.pos[1] // 95 + 1
         else:
             return None
-
 
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):
@@ -177,7 +176,7 @@ class GameEngine:
                 "DID": f"Card{plant_type}",
                 "PName": plant_type,
                 "Index": i,
-                "Rect": pygame.Rect(10, 80 + i * 70, 70, 90),  # Changed to vertical arrangement
+                "Rect": pygame.Rect(10, 80 + i * 70, 70, 90),  # vertical arrangement
                 "Cost": plant_data.get("cost", 100),
                 "MaxCooldown": plant_data.get("cooldown", 7.5),
                 "Cooldown": 0,
@@ -236,6 +235,8 @@ class GameEngine:
             print(f"Failed to create plant {plant_type}: {str(e)}")
             return None
 
+# ...前略（保持和你之前的一样）...
+
     def create_zombie(self, zombie_type, position):
         zombie_data = self.zombies_data.get(zombie_type, {})
         if not zombie_data:
@@ -250,15 +251,27 @@ class GameEngine:
                     img_path = base_path / f"{i}.png"
                     frames.append(pygame.image.load(str(img_path)).convert_alpha())
                 animations[state] = frames
+
             from zombies import Zombie
-            line = (position[1] - 120) // 100 + 1
-            zombie_obj = Zombie(animations, line=line, bg=self.screen, start_x=position[0])
+            line_1based = int(round((position[1] - 80) / 99.0)) + 1
+            line_1based = max(1, min(5, line_1based))
+
+            zombie_obj = Zombie(
+                animations,
+                line=line_1based,
+                bg=self.screen,
+                start_x=position[0],
+                engine=self   # 传入 GameEngine 实例
+            )
             zombie_obj.hp = zombie_data.get('health', zombie_obj.MAX_HP)
             zombie_obj.speed = zombie_data.get('speed', zombie_obj.BASE_SPEED)
             return zombie_obj
         except Exception as e:
             print(f"Failed to create zombie {zombie_type}: {str(e)}")
             return None
+
+# ...后续 update/render 等和之前版本保持一致...
+
 
     def handle_mouse_down(self, pos):
         """处理鼠标按下事件，开始拖动卡片"""
@@ -272,7 +285,6 @@ class GameEngine:
     def handle_mouse_move(self, pos):
         """处理鼠标移动事件，更新拖动位置"""
         if self.DraggingCard:
-            # 更新拖动位置
             dx = pos[0] - self.DraggingPos[0]
             dy = pos[1] - self.DraggingPos[1]
             self.DraggingPos = pos
@@ -284,24 +296,17 @@ class GameEngine:
         if not self.DraggingCard:
             return False
 
-        # 检查是否放置在草坪上 (y坐标在120-520之间)
-        if 145 <= pos[0] <= 875 and 80 <= pos[1] <= 575:  # Added check for x position (avoid card area)
-            # 计算网格位置
-            col = (pos[0] - 145) // 81  # Adjusted for card area
+        if 145 <= pos[0] <= 875 and 80 <= pos[1] <= 575:
+            col = (pos[0] - 145) // 81
             row = (pos[1] - 80) // 99
 
-            # 确保在网格范围内
             if 0 <= row < 5 and 0 <= col < 9:
-                # 检查该位置是否已有植物
                 if self.Grid[row][col] is None:
-                    # 扣除阳光
                     self.SunNum -= self.DraggingCard["Cost"]
-                    # 设置冷却时间
                     self.DraggingCard["Cooldown"] = self.DraggingCard["MaxCooldown"]
                     self.DraggingCard["CDReady"] = 0
 
-                    # 创建植物
-                    plant_x = 145 + col * 81 + 0  # Adjusted for card area
+                    plant_x = 145 + col * 81 + 0
                     plant_y = 80 + row * 99 - 0
                     plant = self.create_plant(self.DraggingCard["PName"], (plant_x, plant_y))
                     if plant:
@@ -323,13 +328,13 @@ class GameEngine:
                 if event.type == QUIT:
                     running = False
                 elif event.type == MOUSEBUTTONDOWN:
-                    if event.button == 1:  # 左键点击
+                    if event.button == 1:
                         self.handle_mouse_down(event.pos)
                 elif event.type == MOUSEMOTION:
-                    if event.buttons[0]:  # 左键拖动
+                    if event.buttons[0]:
                         self.handle_mouse_move(event.pos)
                 elif event.type == MOUSEBUTTONUP:
-                    if event.button == 1:  # 左键释放
+                    if event.button == 1:
                         self.handle_mouse_up(event.pos)
 
             self.update(dt)
@@ -346,27 +351,47 @@ class GameEngine:
 
         pygame.quit()
         sys.exit()
-
+    
     def update(self, dt):
         current_time = pygame.time.get_ticks()
         delta = (current_time - self.last_update_time) / 1000.0
         self.last_update_time = current_time
 
+        # 卡片冷却
         for card in self.ArCard:
             if card["Cooldown"] > 0:
                 card["Cooldown"] = max(0, card["Cooldown"] - delta)
                 card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
             card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
 
+        # 植物动画
         for plant_id, plant in self.AllPlants.items():
             plant["anim"].update(dt)
 
+        # 僵尸更新 & 攻击 & 清理
         for zombie_id, zombie in list(self.Zombies.items()):
             if hasattr(zombie, "update"):
                 zombie.update()
 
-        self.spawn_zombies()
+            # 若处于攻击状态/已有目标，按冷却触发伤害（Zombie 内部也会做一次）
+            if getattr(zombie, 'attack_target_id', None):
+                zombie.perform_attack()
 
+            # 死亡动画结束/越界 → 移除
+            if getattr(zombie, "ready_to_remove", False):
+                del self.Zombies[zombie_id]
+
+        # 植物死亡的清理：从网格撤除
+        for plant_id, plant in list(self.AllPlants.items()):
+            if plant.get('health', 0) <= 0:
+                for row in range(5):
+                    for col in range(9):
+                        if self.Grid[row][col] == plant_id:
+                            self.Grid[row][col] = None
+                del self.AllPlants[plant_id]
+
+        self.spawn_zombies()    
+    
     def spawn_zombies(self):
         if not hasattr(self, 'last_spawn_time'):
             self.last_spawn_time = pygame.time.get_ticks()
@@ -377,6 +402,7 @@ class GameEngine:
                 for zombie_data in self.current_level['AZ']:
                     zombie_type, count, row = zombie_data
                     for _ in range(count):
+                        # 仍按原有协议：这里的 y 用于“行推断”，create_zombie 内部会把它对齐到网格行
                         zombie = self.create_zombie(zombie_type, (850, 120 + row * 100))
                         if zombie:
                             zombie_id = f'zombie_{len(self.Zombies)}'
@@ -385,10 +411,11 @@ class GameEngine:
     def render(self):
         self.screen.blit(self.background, (-105, 0))
 
-        # Draw sun counter at top left
+        # Sun 计数
         sun_text = self.big_font.render(f"Sun: {self.SunNum}", True, (255, 255, 0))
         self.screen.blit(sun_text, (10, 10))
 
+        # 卡片
         for card in self.ArCard:
             plant_type = card["PName"]
             if plant_type in self.card_images:
@@ -397,17 +424,18 @@ class GameEngine:
                 else:
                     img = self.card_gray_images[plant_type]
 
-                # 如果不是正在拖动的卡片才渲染
                 if card != self.DraggingCard:
                     self.screen.blit(img, card["Rect"])
                     cost_text = self.font.render(str(card["Cost"]), True,
                                                  (255, 255, 0) if card["SunReady"] else (150, 150, 150))
                     self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
 
+        # 植物
         for plant_id, plant in self.AllPlants.items():
             frame = plant["anim"].get_current_frame()
             self.screen.blit(frame, plant["position"])
 
+        # 僵尸
         for zombie_id, zombie in self.Zombies.items():
             if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
                 self.screen.blit(zombie.image, zombie.rect)
@@ -419,19 +447,17 @@ class GameEngine:
             else:
                 return None
 
-
 class Lattice:
     """格子类"""
     def __init__(self, row=0, col=0):
-        self.rect = pygame.Rect((145 + col * 81), (80 + row * 99), 81, 99)  # 格子的矩形
-        self.isPlanted = False  # 是否被种植植物
-        self.plants: pygame.sprite.Group = pygame.sprite.OrderedUpdates()  # 格子上的植物列表
-        self.reduplication = False  # 格子是否可叠种
-        self.row = row  # 格子所在行
-        self.col = col  # 格子所在列
+        self.rect = pygame.Rect((145 + col * 81), (80 + row * 99), 81, 99)
+        self.isPlanted = False
+        self.plants: pygame.sprite.Group = pygame.sprite.OrderedUpdates()
+        self.reduplication = False
+        self.row = row
+        self.col = col
 
     def planted(self, event, plant):
-        """需要检测卡牌对应植物，若以下判定成功，创建对应植物的实例对象，并添加到self.plants中"""
         if event == pygame.MOUSEBUTTONUP:
             if self.rect.collidepoint(event.pos) and event.button == 1:
                 if self.reduplication is True:
@@ -447,7 +473,6 @@ class Lattice:
         else:
             self.isPlanted = True
         self.plants.update()
-
 
 if __name__ == "__main__":
     game = GameEngine()
