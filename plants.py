@@ -41,6 +41,9 @@ class Bullet(pygame.sprite.Sprite):
     def move(self):
         self.rect.x += self.speed
 
+    def draw(self) -> None: ...
+    def update(self) -> None: ...
+
 
 class PeaBullet(Bullet):
     ...
@@ -68,11 +71,13 @@ class Plant(pygame.sprite.Sprite):
         self.bullet = PeaBullet
         self.hp = self.MAX_HP
 
-    def attack(self,):
+    def attack(self, game_engine):
         if self.img_index == self.ATTACK_FRAME:
-            return self.bullet((53, 10))
+            game_engine.BulletGroup.add(self.bullet((53, 10)))
 
     def injured(self) -> None: ...
     def update_animation(self) -> None: ...
     def draw(self) -> None: ...
-    def update(self) -> None: ...
+
+    def update(self, game_engine) -> None:
+        self.attack(game_engine)

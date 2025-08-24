@@ -45,19 +45,6 @@ class AnimatedSprite:
         return self.frames[self.current_frame]
 
 
-def get_up_pos(event):
-    """
-    获取鼠标松开位置
-    若在个子范围内返回格子坐标
-    不在则返回 None
-    """
-    if event.type == pygame.MOUSEBUTTONUP:
-        if 145 <= event.pos[0] <= 875 and 80 <= event.pos[1] <= 575:
-            return event.pos[0] // 85 + 1, event.pos[1] // 95 + 1
-        else:
-            return None
-
-
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):
         global game_instance
@@ -412,7 +399,13 @@ class GameEngine:
             if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
                 self.screen.blit(zombie.image, zombie.rect)
 
-    def get_up_pos(self, event):
+    @staticmethod
+    def get_up_pos(event):
+        """
+            获取鼠标松开位置
+            若在个子范围内返回格子坐标
+            不在则返回 None
+        """
         if event.type == pygame.MOUSEBUTTONUP:
             if 145 <= event.pos[0] <= 875 and 80 <= event.pos[1] <= 575:
                 return (event.pos[0] - 145) // 85 + 1, (event.pos[1] - 80) // 95 + 1
