@@ -6,7 +6,7 @@
         "animations": {
             "walk": {
                 "path": "images/Zombies/Zombie/Walk",
-                "frames": 22
+                "frames": 120
             },
             "attack": {
                 "path": "images/Zombies/Zombie/Attack",
