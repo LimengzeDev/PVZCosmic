@@ -1,180 +1,157 @@
 import pygame
-from screen import GameTimer, screen1
-import weakref
+
+# —— 与 GameEngine 保持一致的草坪网格参数 ——
+TILE_LEFT = 145
+TILE_TOP = 80
+TILE_W = 81
+TILE_H = 99
 
 
 class Zombie(pygame.sprite.Sprite):
-    MAX_HP = 270.0
-    BASE_SPEED = 0.6  # negative for moving left
-    WALK_ATTACK_FRAME = 10
+    """通用僵尸：行走→接触植物→攻击→（植物死）继续走 / （僵尸死）播放死亡动画"""
 
-    def __init__(self, images: dict, line=1, bg=screen1, start_x=850) -> None:
+    BASE_SPEED = 0.8
+    MAX_HP = 100
+    ATTACK_DAMAGE = 8
+    ATTACK_INTERVAL = 600
+    ANIM_INTERVAL = 50
+    CONTACT_PAD = 90
+    DEAD_REMOVE_DELAY = 800
+
+    def __init__(self, animations, line=1, bg=None, start_x=850, engine=None):
+        """
+        :param animations: dict {"walk":[Surface...], "attack":[...], "dead":[...]}
+        :param line: 1-based 行号
+        :param bg:   屏幕 Surface
+        :param start_x: 初始 x
+        :param engine: GameEngine 实例
+        """
         super().__init__()
-        self.status = 'walk'
-        self.line = line
-        self.images = images
-        self.img_index = 0
-        self.image = images[self.status][self.img_index]
+        self.animations = animations
+        self.engine = engine
+
+        if "walk" not in self.animations:
+            any_state = next(iter(self.animations.keys()))
+            self.state = any_state
+        else:
+            self.state = "walk"
+
+        self.frames = self.animations[self.state]
+        self.frame_index = 0
+        self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect()
+
+        self.row_index = max(0, min(4, (line - 1)))
+
+        tile_y = TILE_TOP + self.row_index * TILE_H
+        self.rect.x = start_x
+        self.rect.y = tile_y + TILE_H - self.rect.height
+
         self.bg = bg
-        self.rect.left = start_x
-        self.rect.top = 120 + (line - 1) * 100
-
-        self.hp = self.MAX_HP
         self.speed = self.BASE_SPEED
-        self.slow = False
-        self.has_lost_arm = False
-        self.has_lost_head = False
-        self.injury_type = 'normal'
-        self.pending_attack_switch = False
-        self.attack_anim_end = False
+        self.hp = self.MAX_HP
 
-        self.freezing_timer = GameTimer(0)
+        now = pygame.time.get_ticks()
+        self.animation_timer = now
+        self.last_attack_time = now
 
-    def get_game_instance(self):
-        """安全获取游戏实例的方法"""
-        try:
-            from levelManager import game_instance_ref
-            if game_instance_ref is not None:
-                instance = game_instance_ref()
-                if instance is not None:
-                    return instance
-        except ImportError:
-            pass
-        return None
+        self.attack_target_id = None
+        self.attack_target = None
 
-    def update(self) -> None:
-        self.handle_timers()
-        self.attack()
-        self.handle_status()
-        self.update_animation()
-        self.draw()
-        self.move()
+        self.death_started_at = None
+        self.ready_to_remove = False
 
-    def handle_timers(self):
-        """处理所有计时器逻辑"""
-        if hasattr(self, 'freezing_timer') and self.freezing_timer.active:
-            if self.freezing_timer.is_finished():
-                self.speed = self.BASE_SPEED
+    # -------------------- 状态 / 动画 --------------------
 
-    def handle_status(self):
-        """处理僵尸状态变化"""
-        if self.hp <= 0:
-            self.status = 'bang' if self.injury_type == 'bang' else 'dead'
+    def set_animation(self, state: str):
+        if state == self.state:
+            return
+        if state in self.animations:
+            self.state = state
+            self.frames = self.animations[state]
+            self.frame_index = 0
+            self.image = self.frames[self.frame_index]
 
-        if self.status in ['attack', 'lost_arm_attack', 'lost_head_attack'] and self.attack_anim_end is True:
-            self.status = self._get_walk_status()
-            self.img_index = 0
+            if self.state == "attack":
+                self._cached_speed = getattr(self, "_cached_speed", self.speed)
+                self.speed = 0
+            elif self.state == "walk":
+                self.speed = getattr(self, "_cached_speed", self.BASE_SPEED)
 
-        if self.status in ['walk', 'lost_arm_walk', 'lost_head_walk'] and self.pending_attack_switch is True:
-            if self.img_index == self.WALK_ATTACK_FRAME:
-                self.status = self._get_attack_status()
-                self.img_index = 0
+    def _advance_frame(self, now: int):
+        if now - self.animation_timer >= self.ANIM_INTERVAL:
+            self.animation_timer = now
+            self.frame_index = (self.frame_index + 1) % len(self.frames)
+            self.image = self.frames[self.frame_index]
 
-    def update_animation(self):
-        """更新动画帧"""
-        frames = self.images[self.status]
-    
-        # 控制动画速度的因子 (值越大播放越快)
-        speed_factor = 0.5  # 默认1.0，小于1变慢，大于1变快
-    
-        self.img_index += speed_factor  # 修改这里控制速度
-    
-        if self.img_index >= len(frames):
-            self.img_index = 0
-            if self.status in ['attack', 'lost_arm_attack', 'lost_head_attack']:
-                self.attack_anim_end = True
-    
-        self.image = frames[int(self.img_index)]  # 转换为整数索引
+    # -------------------- 主循环更新 --------------------
 
-    def draw(self):
-        """绘制僵尸"""
-        self.bg.blit(self.image, self.rect)
+    def update(self):
+        now = pygame.time.get_ticks()
+        self._advance_frame(now)
 
-    def _get_attack_status(self):
-        """获取攻击状态"""
-        if self.has_lost_head:
-            return 'lost_head_attack'
-        elif self.has_lost_arm:
-            return 'lost_arm_attack'
-        else:
-            return 'attack'
-
-    def _get_walk_status(self):
-        """获取行走状态"""
-        if self.has_lost_head:
-            return "lost_head_walk"
-        elif self.has_lost_arm:
-            return "lost_arm_walk"
-        else:
-            return "walk"
-
-    def attack(self):
-        """检查前方植物并进行攻击"""
-        game_instance = self.get_game_instance()
-        if game_instance is None:
+        if self.state == "dead":
+            if self.death_started_at and now - self.death_started_at >= self.DEAD_REMOVE_DELAY:
+                self.ready_to_remove = True
             return
 
-        if not hasattr(game_instance, 'Plants'):
+        if self.attack_target_id:
+            p = self.engine.AllPlants.get(self.attack_target_id)
+            if (not p) or p.get("health", 0) <= 0:
+                self.attack_target_id = None
+                self.attack_target = None
+                self.set_animation("walk")
+
+        if self.state == "walk":
+            self.rect.x -= self.speed
+            self._try_lock_target()
+
+        if self.state == "attack":
+            self.perform_attack()
+
+        if self.rect.right < 0:
+            self.ready_to_remove = True
+
+        if self.hp <= 0 and self.state != "dead":
+            self.set_animation("dead")
+            self.death_started_at = now
+
+    # -------------------- 碰撞/锁定与攻击 --------------------
+
+    def _try_lock_target(self):
+        if not self.engine:
             return
-
-        collided = False
-        for plant_id, plant in list(game_instance.Plants.items()):
-            if not plant or 'position' not in plant or 'anim' not in plant:
+        row = self.row_index
+        nearest_pid = None
+        for col in range(8, -1, -1):
+            pid = self.engine.Grid[row][col]
+            if not pid:
                 continue
-                
-            try:
-                plant_rect = pygame.Rect(plant['position'][0], plant['position'][1],
-                                       plant['anim'].frames[0].get_width(),
-                                       plant['anim'].frames[0].get_height())
-                if self.rect.colliderect(plant_rect):
-                    collided = True
-                    self.pending_attack_switch = True
-                    plant['health'] -= 1
-                    if plant['health'] <= 0:
-                        del game_instance.Plants[plant_id]
-                    break
-            except (AttributeError, KeyError, IndexError) as e:
-                print(f"Error processing plant {plant_id}: {str(e)}")
-                continue
-                
-        if not collided:
-            self.pending_attack_switch = False
+            cell_rect = pygame.Rect(
+                TILE_LEFT + col * TILE_W,
+                TILE_TOP + row * TILE_H,
+                TILE_W,
+                TILE_H
+            )
+            if (self.rect.left <= cell_rect.right - self.CONTACT_PAD and
+                self.rect.right > cell_rect.left + 4):
+                nearest_pid = pid
+                break
 
-    def injured(self, damage_type, damage_value, freeze_duration=0) -> None:
-        """处理受伤逻辑"""
-        prev_hp = self.hp
-        self.hp -= damage_value
+        if nearest_pid:
+            self.attack_target_id = nearest_pid
+            self.attack_target = self.engine.AllPlants.get(nearest_pid)
+            self.set_animation("attack")
 
-        if not self.has_lost_arm and self.hp <= self.MAX_HP * 0.5:
-            self.has_lost_arm = True
-        if not self.has_lost_head and self.hp <= self.MAX_HP * 0.2:
-            self.has_lost_head = True
-
-        if damage_type == 'freezing':
-            self.speed = self.BASE_SPEED / 2
-            self.injury_type = 'normal'
-            self.freezing_timer.start(freeze_duration)
-
-        if self.hp <= 0 < prev_hp:
-            self.hp = 0
-            self.injury_type = damage_type
-            self.die()
-
-    def move(self) -> None:
-        """移动僵尸"""
-        if self.status not in ['dead', 'bang']:
-            self.rect.left += self.speed
-
-    def die(self):
-        """处理死亡逻辑"""
-        self.speed = 0
-        self.status = 'dead'
-        self.img_index = 0
-        self.update_animation()
-        pygame.time.delay(100)
-        self.kill()
-
-
-class NormalZombie(Zombie):
-    pass
+    def perform_attack(self):
+        if not self.attack_target or not self.attack_target_id:
+            return
+        now = pygame.time.get_ticks()
+        if now - self.last_attack_time >= self.ATTACK_INTERVAL:
+            self.last_attack_time = now
+            hp = max(0, self.attack_target.get("health", 0) - self.ATTACK_DAMAGE)
+            self.attack_target["health"] = hp
+            if hp <= 0:
+                self.attack_target = None
+                self.attack_target_id = None
+                self.set_animation("walk")

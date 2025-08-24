@@ -2,8 +2,8 @@
     "Peashooter": {
         "cost": 100,
         "cooldown": 7.5,
-        "health": 100,
-        "animation": "images/Plants/Jalapeno/Jalapeno.gif",
+        "health": 1000,
+        "animation": "images/Plants/Peashooter/Peashooter.gif",
         "card_image": "images/Card/Plants/Peashooter.png"
     },
     "Jalapeno": {
