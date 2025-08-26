@@ -56,7 +56,10 @@ def get_up_pos(event):
             return event.pos[0] // 85 + 1, event.pos[1] // 95 + 1
         else:
             return None
+<<<<<<< HEAD
 
+=======
+>>>>>>> cd6b584f39fd4797a19ac30d27afe71d83248a08
 
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):

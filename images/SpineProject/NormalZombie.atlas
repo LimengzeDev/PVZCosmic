@@ -1,0 +1,146 @@
+
+NormalZombie.png
+size: 157,142
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+Zombie_body
+  rotate: false
+  xy: 2, 77
+  size: 53, 63
+  orig: 53, 63
+  offset: 0, 0
+  index: -1
+Zombie_hair
+  rotate: true
+  xy: 2, 14
+  size: 61, 31
+  orig: 64, 31
+  offset: 3, 0
+  index: -1
+Zombie_head
+  rotate: true
+  xy: 35, 22
+  size: 53, 48
+  orig: 53, 48
+  offset: 0, 0
+  index: -1
+Zombie_innerarm_hand
+  rotate: false
+  xy: 109, 94
+  size: 20, 23
+  orig: 20, 23
+  offset: 0, 0
+  index: -1
+Zombie_innerarm_lower
+  rotate: true
+  xy: 131, 34
+  size: 19, 24
+  orig: 19, 24
+  offset: 0, 0
+  index: -1
+Zombie_innerarm_upper
+  rotate: false
+  xy: 114, 41
+  size: 15, 23
+  orig: 15, 25
+  offset: 0, 1
+  index: -1
+Zombie_innerleg_foot
+  rotate: false
+  xy: 85, 58
+  size: 27, 17
+  orig: 27, 17
+  offset: 0, 0
+  index: -1
+Zombie_innerleg_lower
+  rotate: true
+  xy: 109, 2
+  size: 30, 36
+  orig: 32, 36
+  offset: 0, 0
+  index: -1
+Zombie_innerleg_upper
+  rotate: false
+  xy: 114, 66
+  size: 15, 26
+  orig: 15, 26
+  offset: 0, 0
+  index: -1
+Zombie_jaw
+  rotate: false
+  xy: 80, 77
+  size: 32, 15
+  orig: 32, 15
+  offset: 0, 0
+  index: -1
+Zombie_neck
+  rotate: false
+  xy: 57, 119
+  size: 20, 21
+  orig: 20, 21
+  offset: 0, 0
+  index: -1
+Zombie_outerarm_hand
+  rotate: true
+  xy: 80, 94
+  size: 25, 27
+  orig: 25, 27
+  offset: 0, 0
+  index: -1
+Zombie_outerarm_hand2
+  rotate: false
+  xy: 131, 87
+  size: 24, 30
+  orig: 24, 30
+  offset: 0, 0
+  index: -1
+Zombie_outerarm_lower
+  rotate: true
+  xy: 79, 121
+  size: 19, 28
+  orig: 19, 28
+  offset: 0, 0
+  index: -1
+Zombie_outerarm_upper
+  rotate: true
+  xy: 35, 3
+  size: 17, 35
+  orig: 17, 35
+  offset: 0, 0
+  index: -1
+Zombie_outerarm_upper2
+  rotate: true
+  xy: 72, 3
+  size: 17, 35
+  orig: 17, 35
+  offset: 0, 0
+  index: -1
+Zombie_outerleg_foot
+  rotate: false
+  xy: 109, 119
+  size: 42, 21
+  orig: 42, 21
+  offset: 0, 0
+  index: -1
+Zombie_outerleg_lower
+  rotate: false
+  xy: 131, 55
+  size: 24, 30
+  orig: 24, 30
+  offset: 0, 0
+  index: -1
+Zombie_outerleg_upper
+  rotate: false
+  xy: 57, 78
+  size: 21, 39
+  orig: 21, 39
+  offset: 0, 0
+  index: -1
+Zombie_tie
+  rotate: false
+  xy: 85, 26
+  size: 17, 30
+  orig: 17, 30
+  offset: 0, 0
+  index: -1
