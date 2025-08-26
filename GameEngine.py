@@ -45,8 +45,6 @@ class AnimatedSprite:
     def get_current_frame(self):
         return self.frames[self.current_frame]
 
-<<<<<<< HEAD
-=======
 def get_up_pos(event):
     """
     获取鼠标松开位置
@@ -58,7 +56,7 @@ def get_up_pos(event):
             return event.pos[0] // 85 + 1, event.pos[1] // 95 + 1
         else:
             return None
->>>>>>> bf75a75bcbe84d392f676603496e4522da1b594e
+
 
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):

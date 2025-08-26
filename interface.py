@@ -61,7 +61,7 @@ def adv_cmd():
     i = 1
     # 点击后的动画
 
-    while i <= 12:
+    while i <= 24:
         adv_button.image = adv
         adv_button.draw()
         pygame.display.flip()
