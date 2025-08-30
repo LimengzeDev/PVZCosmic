@@ -45,21 +45,6 @@ class AnimatedSprite:
     def get_current_frame(self):
         return self.frames[self.current_frame]
 
-def get_up_pos(event):
-    """
-    获取鼠标松开位置
-    若在个子范围内返回格子坐标
-    不在则返回 None
-    """
-    if event.type == pygame.MOUSEBUTTONUP:
-        if 145 <= event.pos[0] <= 875 and 80 <= event.pos[1] <= 575:
-            return event.pos[0] // 85 + 1, event.pos[1] // 95 + 1
-        else:
-            return None
-<<<<<<< HEAD
-
-=======
->>>>>>> cd6b584f39fd4797a19ac30d27afe71d83248a08
 
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):
@@ -456,6 +441,7 @@ class GameEngine:
                 return (event.pos[0] - 145) // 85 + 1, (event.pos[1] - 80) // 95 + 1
             else:
                 return None
+
 
 class Lattice:
     """格子类"""
