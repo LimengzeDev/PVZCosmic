@@ -7,7 +7,7 @@ pygame.init()
 pygame.mixer.init()
 running: bool = True
 
-ID = [inter, selector]
+ID = {inter, selector}
 while running:
     for name in ID:
         if name.__name__ == screen.name:
