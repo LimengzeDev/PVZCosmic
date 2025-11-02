@@ -9,6 +9,66 @@ from PIL import Image, ImageSequence  # For GIF animation support
 # 方便 zombies.py 调用 GameEngine 实例
 game_instance = None
 
+# 在文件开头添加Bullet类定义
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, plant_type, position, damage, speed=5, effect=None):
+        super().__init__()
+        self.plant_type = plant_type
+        self.damage = damage
+        self.speed = speed
+        self.effect = effect  # 特殊效果，如冰冻、火焰等
+        
+        # 加载子弹图片
+        try:
+            if plant_type == "Peashooter":
+                img_path = game_instance.base_dir / "images/plants/Pea.png"
+                self.image = pygame.image.load(str(img_path)).convert_alpha()
+            elif plant_type == "SnowPea":
+                img_path = game_instance.base_dir / "images/plants/SnowPea.png"
+                self.image = pygame.image.load(str(img_path)).convert_alpha()
+            else:
+                # 默认子弹
+                self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
+                pygame.draw.circle(self.image, (0, 255, 0), (7, 7), 7)
+        except:
+            self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
+            pygame.draw.circle(self.image, (0, 255, 0), (7, 7), 7)
+            
+        self.rect = self.image.get_rect()
+        self.rect.centerx = position[0] + 40  # 从植物右侧发射
+        self.rect.centery = position[1] + 40
+        
+        # 记录子弹所在行
+        self.row = int((position[1] - 80) // 99)
+        
+    def update(self):
+        """更新子弹位置"""
+        self.rect.x += self.speed
+        
+        # 如果子弹超出屏幕右侧，则删除
+        if self.rect.left > 900:
+            self.kill()
+            
+    def check_collision(self, zombies):
+        """检查子弹与僵尸的碰撞"""
+        for zombie_id, zombie in list(zombies.items()):
+            if hasattr(zombie, 'rect') and self.rect.colliderect(zombie.rect):
+                # 检查是否在同一行
+                if zombie.row_index == self.row:
+                    # 对僵尸造成伤害
+                    zombie.hp -= self.damage
+                    
+                    # 应用特殊效果
+                    if self.effect == "freeze":
+                        # 冰冻效果：减速
+                        zombie.speed = max(0.2, zombie.speed * 0.5)
+                        # 可以在这里添加冰冻视觉效果
+                    
+                    self.kill()
+                    return True
+        return False
+
+
 class AnimatedSprite:
     def __init__(self, gif_path, position=(0, 0)):
         self.frames = []
@@ -102,8 +162,9 @@ class GameEngine:
         self.last_time = pygame.time.get_ticks()
         self.card_gray_images = {}
         self.BulletGroup = pygame.sprite.Group()
-        self.last_update_time = pygame.time.get_ticks()
-
+        self.last_bullet_time = pygame.time.get_ticks()
+        
+        # ... 其余初始化代码 ...
         # 设置全局实例
         game_instance = self
         self.preload_zombie_resources()
@@ -220,7 +281,11 @@ class GameEngine:
                 gray_surface.set_at((x, y), (gray, gray, gray, a))
         return gray_surface
 
-    def create_plant(self, plant_type, position):
+
+
+
+    def create_plant(self, plant_type, position, row, col):
+        """创建植物，添加攻击相关属性"""
         plant_data = self.plants_data.get(plant_type, {})
         if not plant_data:
             print(f"Plant type {plant_type} not found in plants.json")
@@ -228,72 +293,176 @@ class GameEngine:
         try:
             anim_path = self.base_dir / plant_data["animation"]
             anim = AnimatedSprite(str(anim_path))
-            return {
+            
+            plant = {
                 "type": plant_type,
                 "position": position,
                 "anim": anim,
                 "health": plant_data.get("health", 100),
-                "cooldown": 0
+                "cooldown": 0,
+                "row": row,
+                "col": col,
+                "attack_data": plant_data.get("attack", {}),
+                "last_attack_time": 0
             }
+            
+            return plant
         except Exception as e:
             print(f"Failed to create plant {plant_type}: {str(e)}")
             return None
 
-# ...前略（保持和你之前的一样）...
+    def update_plant_attacks(self, current_time):
+        """更新植物攻击逻辑"""
+        for plant_id, plant in self.AllPlants.items():
+            attack_data = plant.get("attack_data", {})
+            if not attack_data:
+                continue
+                
+            attack_interval = attack_data.get("interval", 2000)  # 默认2秒攻击一次
+            
+            # 检查是否到了攻击时间
+            if current_time - plant["last_attack_time"] >= attack_interval:
+                # 检查该行是否有僵尸
+                if self.has_zombies_in_row(plant["row"]):
+                    self.create_bullet(plant)
+                    plant["last_attack_time"] = current_time
 
-    def create_zombie(self, zombie_type, position):
-        zombie_data = self.zombies_data.get(zombie_type, {})
-        if not zombie_data:
-            print(f"Zombie type {zombie_type} not found in zombies.json")
-            return None
-        try:
-            animations = {}
-            for state, state_data in zombie_data["animations"].items():
-                frames = []
-                base_path = self.base_dir / state_data['path']
-                for i in range(1, state_data['frames'] + 1):
-                    img_path = base_path / f"{i}.png"
-                    frames.append(pygame.image.load(str(img_path)).convert_alpha())
-                animations[state] = frames
-
-            from zombies import Zombie
-            line_1based = int(round((position[1] - 80) / 99.0)) + 1
-            line_1based = max(1, min(5, line_1based))
-
-            zombie_obj = Zombie(
-                animations,
-                line=line_1based,
-                bg=self.screen,
-                start_x=position[0],
-                engine=self   # 传入 GameEngine 实例
-            )
-            zombie_obj.hp = zombie_data.get('health', zombie_obj.MAX_HP)
-            zombie_obj.speed = zombie_data.get('speed', zombie_obj.BASE_SPEED)
-            return zombie_obj
-        except Exception as e:
-            print(f"Failed to create zombie {zombie_type}: {str(e)}")
-            return None
-
-# ...后续 update/render 等和之前版本保持一致...
-
-
-    def handle_mouse_down(self, pos):
-        """处理鼠标按下事件，开始拖动卡片"""
-        for card in self.ArCard:
-            if card["Rect"].collidepoint(pos) and card["CDReady"] and card["SunReady"]:
-                self.DraggingCard = card
-                self.DraggingPos = pos
+    def has_zombies_in_row(self, row):
+        """检查指定行是否有僵尸"""
+        for zombie_id, zombie in self.Zombies.items():
+            if hasattr(zombie, 'row_index') and zombie.row_index == row:
                 return True
         return False
 
-    def handle_mouse_move(self, pos):
-        """处理鼠标移动事件，更新拖动位置"""
-        if self.DraggingCard:
-            dx = pos[0] - self.DraggingPos[0]
-            dy = pos[1] - self.DraggingPos[1]
-            self.DraggingPos = pos
-            return True
-        return False
+    def create_bullet(self, plant):
+        """根据植物类型创建子弹"""
+        attack_data = plant.get("attack_data", {})
+        bullet_type = attack_data.get("type", "pea")
+        damage = attack_data.get("damage", 20)
+        
+        if bullet_type == "pea":
+            effect = None
+            if plant["type"] == "SnowPea":
+                effect = "freeze"
+                
+            bullet = Bullet(
+                plant["type"], 
+                plant["position"], 
+                damage,
+                effect=effect
+            )
+            self.BulletGroup.add(bullet)
+            
+        elif bullet_type == "instant":
+            # 瞬时攻击（如土豆地雷）
+            self.instant_attack(plant, damage)
+            
+        # 可以在这里添加其他类型的攻击
+
+    def instant_attack(self, plant, damage):
+        """瞬时攻击（对范围内的所有僵尸造成伤害）"""
+        row = plant["row"]
+        for zombie_id, zombie in list(self.Zombies.items()):
+            if hasattr(zombie, 'row_index') and zombie.row_index == row:
+                # 检查僵尸是否在攻击范围内
+                if self.is_zombie_in_range(zombie, plant):
+                    zombie.hp -= damage
+                    # 可以在这里添加攻击特效
+
+    def is_zombie_in_range(self, zombie, plant):
+        """检查僵尸是否在植物的攻击范围内"""
+        plant_right = plant["position"][0] + 80
+        zombie_left = zombie.rect.left
+        
+        # 僵尸在植物右侧且在攻击范围内
+        return zombie_left <= plant_right + 200  # 假设攻击范围为200像素
+
+    def update_bullets(self):
+        """更新所有子弹状态"""
+        self.BulletGroup.update()
+        
+        # 检查子弹与僵尸的碰撞
+        for bullet in self.BulletGroup.sprites():
+            bullet.check_collision(self.Zombies)
+
+    def update(self, dt):
+        current_time = pygame.time.get_ticks()
+        delta = (current_time - self.last_update_time) / 1000.0
+        self.last_update_time = current_time
+
+        # 卡片冷却
+        for card in self.ArCard:
+            if card["Cooldown"] > 0:
+                card["Cooldown"] = max(0, card["Cooldown"] - delta)
+                card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
+            card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
+
+        # 植物动画
+        for plant_id, plant in self.AllPlants.items():
+            plant["anim"].update(dt)
+
+        # 植物攻击
+        self.update_plant_attacks(current_time)
+        
+        # 子弹更新
+        self.update_bullets()
+
+        # 僵尸更新 & 攻击 & 清理
+        for zombie_id, zombie in list(self.Zombies.items()):
+            if hasattr(zombie, "update"):
+                zombie.update()
+
+            if getattr(zombie, 'attack_target_id', None):
+                zombie.perform_attack()
+
+            if getattr(zombie, "ready_to_remove", False):
+                del self.Zombies[zombie_id]
+
+        # 植物死亡的清理
+        for plant_id, plant in list(self.AllPlants.items()):
+            if plant.get('health', 0) <= 0:
+                for row in range(5):
+                    for col in range(9):
+                        if self.Grid[row][col] == plant_id:
+                            self.Grid[row][col] = None
+                del self.AllPlants[plant_id]
+
+        self.spawn_zombies()
+
+    def render(self):
+        self.screen.blit(self.background, (-105, 0))
+
+        # Sun 计数
+        sun_text = self.big_font.render(f"Sun: {self.SunNum}", True, (255, 255, 0))
+        self.screen.blit(sun_text, (10, 10))
+
+        # 卡片
+        for card in self.ArCard:
+            plant_type = card["PName"]
+            if plant_type in self.card_images:
+                if card["CDReady"] and card["SunReady"]:
+                    img = self.card_images[plant_type]
+                else:
+                    img = self.card_gray_images[plant_type]
+
+                if card != self.DraggingCard:
+                    self.screen.blit(img, card["Rect"])
+                    cost_text = self.font.render(str(card["Cost"]), True,
+                                                 (255, 255, 0) if card["SunReady"] else (150, 150, 150))
+                    self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
+
+        # 植物
+        for plant_id, plant in self.AllPlants.items():
+            frame = plant["anim"].get_current_frame()
+            self.screen.blit(frame, plant["position"])
+
+        # 子弹
+        self.BulletGroup.draw(self.screen)
+
+        # 僵尸
+        for zombie_id, zombie in self.Zombies.items():
+            if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
+                self.screen.blit(zombie.image, zombie.rect)
 
     def handle_mouse_up(self, pos):
         """处理鼠标释放事件，放置植物"""
@@ -312,7 +481,7 @@ class GameEngine:
 
                     plant_x = 145 + col * 81 + 0
                     plant_y = 80 + row * 99 - 0
-                    plant = self.create_plant(self.DraggingCard["PName"], (plant_x, plant_y))
+                    plant = self.create_plant(self.DraggingCard["PName"], (plant_x, plant_y), row, col)
                     if plant:
                         plant_id = f"plant_{len(self.AllPlants)}"
                         self.AllPlants[plant_id] = plant
@@ -320,6 +489,8 @@ class GameEngine:
 
         self.DraggingCard = None
         return True
+
+# ... 其余代码保持不变 ...
 
     def run(self):
         running = True
