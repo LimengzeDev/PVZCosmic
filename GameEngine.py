@@ -3,6 +3,8 @@ import os
 import pygame
 import sys
 from pathlib import Path
+
+from numpy.ma.core import anomalies
 from pygame.locals import *
 from PIL import Image, ImageSequence  # For GIF animation support
 
@@ -69,7 +71,7 @@ class Bullet(pygame.sprite.Sprite):
         return False
 
 
-class AnimatedSprite:
+class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, gif_path, position=(0, 0)):
         self.frames = []
         self.current_frame = 0
@@ -148,6 +150,7 @@ class GameEngine:
         self.card_gray_images = {}
         self.BulletGroup = pygame.sprite.Group()
         self.last_bullet_time = pygame.time.get_ticks()
+        self.last_update_time = pygame.time.get_ticks()
         
         # ... 其余初始化代码 ...
         # 设置全局实例
@@ -449,6 +452,58 @@ class GameEngine:
             if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
                 self.screen.blit(zombie.image, zombie.rect)
 
+    def handle_mouse_down(self, pos):
+
+        """  """
+        for card in self.ArCard:
+            if card['Rect'].collidepoint(pos) and card["CDReady"] and card["SunReady"]:
+                self.DraggingCard = card
+                self.DraggingPos = pos
+                return True
+        return False
+
+    def create_zombie(self, zombie_type, position):
+        zombie_data = self.zombies_data.get(zombie_type, {})
+        if not zombie_data:
+            print(f"Zombie type {zombie_type} not found in zombies.json")
+            return None
+        try:
+            animations = {}
+            for state, state_data in zombie_data["animations"].items():
+                frames = []
+                base_path = self.base_dir / state_data['path']
+                for i in range (1, state_data['frames'] + 1):
+                    img_path = base_path / f"{i}.png"
+                    frames.append(pygame.image.load(str(img_path)).convert_alpha())
+                animations[state] = frames
+
+            from zombies import Zombie
+            line_1based = int(round((position[1] - 80) / 99.0)) + 1
+            line_1based = max(1, min(5, line_1based))
+
+            zombie_obj = Zombie(
+                animations,
+                line=line_1based,
+                bg=self.screen,
+                start_x=position[0],
+                engine=self   #blablabla
+            )
+            zombie_obj.hp = zombie_data.get('health', zombie_obj.MAX_HP)
+            zombie_obj.speed = zombie_data.get('speed', zombie_obj.BASE_SPEED)
+            return zombie_obj
+        except Exception as e:
+            print (f"Failed to create zombie  {zombie_type}: {str(a)}")
+            return None
+
+    def handle_mouse_move(self,pos):
+        """  """
+        if self.DraggingCard:
+            dx = pos[0] - self.DraggingPos[0]
+            dy = pos[1] - self.DraggingPos[1]
+            self.DraggingPos = pos
+            return True
+        return False
+
     def handle_mouse_up(self, pos):
         """处理鼠标释放事件，放置植物"""
         if not self.DraggingCard:
@@ -550,8 +605,8 @@ class GameEngine:
                             self.Grid[row][col] = None
                 del self.AllPlants[plant_id]
 
-        self.spawn_zombies()    
-    
+        self.spawn_zombies()
+
     def spawn_zombies(self):
         if not hasattr(self, 'last_spawn_time'):
             self.last_spawn_time = pygame.time.get_ticks()
@@ -619,31 +674,17 @@ class Lattice:
     def __init__(self, row=0, col=0):
         self.rect = pygame.Rect((145 + col * 81), (80 + row * 99), 81, 99)
         self.isPlanted = False
-        self.plants: pygame.sprite.Group = pygame.sprite.OrderedUpdates()
+        self.plants = pygame.sprite.OrderedUpdates()
         self.reduplication = False
         self.row = row
         self.col = col
 
-    def planted(self, event, plant):
-        if event == pygame.MOUSEBUTTONUP:
-            if self.rect.collidepoint(event.pos) and event.button == 1:
-                if self.reduplication is True:
-                    self.plants.add(plant)
-                    self.isPlanted = True
-                elif self.isPlanted is False and len(self.plants) == 0:
-                    self.plants.add(plant)
-                    self.isPlanted = True
 
     def update_plants(self):
-        if len(self.plants) == 0:
-            self.isPlanted = False
-        else:
-            self.isPlanted = True
         self.plants.update()
 
 if __name__ == "__main__":
     game = GameEngine()
     if game.load_level("1"):
         game.run()
-    else:
-        print(f"Failed to load level 1.")
+    els

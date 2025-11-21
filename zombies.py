@@ -1,4 +1,15 @@
 import pygame
+import json
+from pathlib import Path
+
+base_dir = Path(__file__).parent
+file_path = base_dir / "data" / "zombies.json"
+try:
+    with open(file_path, "r") as f:
+        zombies_data = json.load(f)
+except Exception as e:
+    zombies_data = {}
+    print(f"filed to load {file_path}: {str(e)}")
 
 # —— 与 GameEngine 保持一致的草坪网格参数 ——
 TILE_LEFT = 145

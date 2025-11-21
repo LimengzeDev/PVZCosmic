@@ -1,4 +1,15 @@
 import pygame
+import json
+from pathlib import Path
+
+bath_dir = Path(__file__).parent
+file_path = bath_dir / "data"  / "plants.json"
+try:
+    with open(file_path, "r") as f:
+        plants_data = json.load(f)
+except Exception as e:
+    plants_data = {}
+    print(f"filed to load {file_path}: {str(e)}")
 
 
 class Bullet(pygame.sprite.Sprite):
