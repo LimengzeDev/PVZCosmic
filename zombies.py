@@ -1,3 +1,5 @@
+from linecache import cache
+
 import pygame
 import json
 from pathlib import Path
@@ -10,6 +12,27 @@ try:
 except Exception as e:
     zombies_data = {}
     print(f"filed to load {file_path}: {str(e)}")
+
+def preload_zombie_resources():
+    zombies_cache = {}
+    for zombie_type, data in zombies_data.items():
+        try:
+            animations = {}
+            for state, state_data in data["animations"].items():
+                frames = []
+                base_path = base_dir / state_data['path']
+                for i in range(1, state_data['frames'] + 1):
+                    img_path = base_path / f"{i}.png"
+                    img = pygame.image.load(str(img_path)).convert_alpha()
+                    frames.append(img)
+                animations[state] = frames
+            zombies_cache[zombie_type] = animations
+        except Exception as e:
+            print(f"failed to preload zombie: {zombie_type}: {str(e)}")
+
+    return zombies_cache
+
+all_zombies_animations = preload_zombie_resources()
 
 # —— 与 GameEngine 保持一致的草坪网格参数 ——
 TILE_LEFT = 145
@@ -29,7 +52,7 @@ class Zombie(pygame.sprite.Sprite):
     CONTACT_PAD = 90
     DEAD_REMOVE_DELAY = 800
 
-    def __init__(self, animations, line=1, bg=None, start_x=850, engine=None):
+    def __init__(self, zombie_type='BasicZombie', line=1, bg=None, start_x=850, engine=None):
         """
         :param animations: dict {"walk":[Surface...], "attack":[...], "dead":[...]}
         :param line: 1-based 行号
@@ -38,6 +61,7 @@ class Zombie(pygame.sprite.Sprite):
         :param engine: GameEngine 实例
         """
         super().__init__()
+        animations = all_zombies_animations[zombie_type]
         self.animations = animations
         self.engine = engine
 

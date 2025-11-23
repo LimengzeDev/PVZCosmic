@@ -32,7 +32,7 @@ class Bullet(pygame.sprite.Sprite):
                 # 默认子弹
                 self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
                 pygame.draw.circle(self.image, (0, 255, 0), (7, 7), 7)
-        except:
+        except :
             self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
             pygame.draw.circle(self.image, (0, 255, 0), (7, 7), 7)
             
@@ -73,6 +73,7 @@ class Bullet(pygame.sprite.Sprite):
 
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, gif_path, position=(0, 0)):
+        super().__init__()
         self.frames = []
         self.current_frame = 0
         self.animation_speed = 0.1
@@ -155,25 +156,6 @@ class GameEngine:
         # ... 其余初始化代码 ...
         # 设置全局实例
         game_instance = self
-        self.preload_zombie_resources()
-
-    def preload_zombie_resources(self):
-        """预加载所有僵尸动画资源"""
-        self.zombie_cache = {}
-        for zombie_type, data in self.zombies_data.items():
-            try:
-                animations = {}
-                for state, state_data in data["animations"].items():
-                    frames = []
-                    base_path = self.base_dir / state_data['path']
-                    for i in range(1, state_data['frames'] + 1):
-                        img_path = base_path / f"{i}.png"
-                        img = pygame.image.load(str(img_path)).convert_alpha()
-                        frames.append(img)
-                    animations[state] = frames
-                self.zombie_cache[zombie_type] = animations
-            except Exception as e:
-                print(f"Failed to preload zombie {zombie_type}: {str(e)}")
 
     def load_data_file(self, filename):
         file_path = self.data_folder / filename
@@ -452,9 +434,9 @@ class GameEngine:
             if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
                 self.screen.blit(zombie.image, zombie.rect)
 
-    def handle_mouse_down(self, pos):
+    def handle_mouse_up(self, pos):
 
-        """  """
+        """处理鼠标释放事件，开始拖动卡片"""
         for card in self.ArCard:
             if card['Rect'].collidepoint(pos) and card["CDReady"] and card["SunReady"]:
                 self.DraggingCard = card
@@ -468,21 +450,13 @@ class GameEngine:
             print(f"Zombie type {zombie_type} not found in zombies.json")
             return None
         try:
-            animations = {}
-            for state, state_data in zombie_data["animations"].items():
-                frames = []
-                base_path = self.base_dir / state_data['path']
-                for i in range (1, state_data['frames'] + 1):
-                    img_path = base_path / f"{i}.png"
-                    frames.append(pygame.image.load(str(img_path)).convert_alpha())
-                animations[state] = frames
 
             from zombies import Zombie
             line_1based = int(round((position[1] - 80) / 99.0)) + 1
             line_1based = max(1, min(5, line_1based))
 
             zombie_obj = Zombie(
-                animations,
+                zombie_type=zombie_type,
                 line=line_1based,
                 bg=self.screen,
                 start_x=position[0],
@@ -492,11 +466,11 @@ class GameEngine:
             zombie_obj.speed = zombie_data.get('speed', zombie_obj.BASE_SPEED)
             return zombie_obj
         except Exception as e:
-            print (f"Failed to create zombie  {zombie_type}: {str(a)}")
+            print (f"Failed to create zombie  {zombie_type}: {str(e)}")
             return None
 
     def handle_mouse_move(self,pos):
-        """  """
+        """处理鼠标移动事件, 更新拖动位置"""
         if self.DraggingCard:
             dx = pos[0] - self.DraggingPos[0]
             dy = pos[1] - self.DraggingPos[1]
@@ -504,8 +478,8 @@ class GameEngine:
             return True
         return False
 
-    def handle_mouse_up(self, pos):
-        """处理鼠标释放事件，放置植物"""
+    def handle_mouse_down(self, pos):
+        """处理鼠标按下事件，放置植物"""
         if not self.DraggingCard:
             return False
 
@@ -566,46 +540,6 @@ class GameEngine:
 
         pygame.quit()
         sys.exit()
-    
-    def update(self, dt):
-        current_time = pygame.time.get_ticks()
-        delta = (current_time - self.last_update_time) / 1000.0
-        self.last_update_time = current_time
-
-        # 卡片冷却
-        for card in self.ArCard:
-            if card["Cooldown"] > 0:
-                card["Cooldown"] = max(0, card["Cooldown"] - delta)
-                card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
-            card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
-
-        # 植物动画
-        for plant_id, plant in self.AllPlants.items():
-            plant["anim"].update(dt)
-
-        # 僵尸更新 & 攻击 & 清理
-        for zombie_id, zombie in list(self.Zombies.items()):
-            if hasattr(zombie, "update"):
-                zombie.update()
-
-            # 若处于攻击状态/已有目标，按冷却触发伤害（Zombie 内部也会做一次）
-            if getattr(zombie, 'attack_target_id', None):
-                zombie.perform_attack()
-
-            # 死亡动画结束/越界 → 移除
-            if getattr(zombie, "ready_to_remove", False):
-                del self.Zombies[zombie_id]
-
-        # 植物死亡的清理：从网格撤除
-        for plant_id, plant in list(self.AllPlants.items()):
-            if plant.get('health', 0) <= 0:
-                for row in range(5):
-                    for col in range(9):
-                        if self.Grid[row][col] == plant_id:
-                            self.Grid[row][col] = None
-                del self.AllPlants[plant_id]
-
-        self.spawn_zombies()
 
     def spawn_zombies(self):
         if not hasattr(self, 'last_spawn_time'):
@@ -622,51 +556,6 @@ class GameEngine:
                         if zombie:
                             zombie_id = f'zombie_{len(self.Zombies)}'
                             self.Zombies[zombie_id] = zombie
-
-    def render(self):
-        self.screen.blit(self.background, (-105, 0))
-
-        # Sun 计数
-        sun_text = self.big_font.render(f"Sun: {self.SunNum}", True, (255, 255, 0))
-        self.screen.blit(sun_text, (10, 10))
-
-        # 卡片
-        for card in self.ArCard:
-            plant_type = card["PName"]
-            if plant_type in self.card_images:
-                if card["CDReady"] and card["SunReady"]:
-                    img = self.card_images[plant_type]
-                else:
-                    img = self.card_gray_images[plant_type]
-
-                if card != self.DraggingCard:
-                    self.screen.blit(img, card["Rect"])
-                    cost_text = self.font.render(str(card["Cost"]), True,
-                                                 (255, 255, 0) if card["SunReady"] else (150, 150, 150))
-                    self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
-
-        # 植物
-        for plant_id, plant in self.AllPlants.items():
-            frame = plant["anim"].get_current_frame()
-            self.screen.blit(frame, plant["position"])
-
-        # 僵尸
-        for zombie_id, zombie in self.Zombies.items():
-            if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
-                self.screen.blit(zombie.image, zombie.rect)
-
-    @staticmethod
-    def get_up_pos(event):
-        """
-            获取鼠标松开位置
-            若在个子范围内返回格子坐标
-            不在则返回 None
-        """
-        if event.type == pygame.MOUSEBUTTONUP:
-            if 145 <= event.pos[0] <= 875 and 80 <= event.pos[1] <= 575:
-                return (event.pos[0] - 145) // 85 + 1, (event.pos[1] - 80) // 95 + 1
-            else:
-                return None
 
 
 class Lattice:
@@ -687,4 +576,5 @@ if __name__ == "__main__":
     game = GameEngine()
     if game.load_level("1"):
         game.run()
-    els
+    else:
+        print(f"failed to load level 1 ")
