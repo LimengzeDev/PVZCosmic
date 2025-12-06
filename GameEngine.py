@@ -4,12 +4,12 @@ import pygame
 import sys
 from pathlib import Path
 
-from numpy.ma.core import anomalies
 from pygame.locals import *
 from PIL import Image, ImageSequence  # For GIF animation support
 
 # 方便 zombies.py 调用 GameEngine 实例
 game_instance = None
+base_dir = Path(__file__).parent
 
 # 在文件开头添加Bullet类定义
 class Bullet(pygame.sprite.Sprite):
@@ -23,10 +23,10 @@ class Bullet(pygame.sprite.Sprite):
         # 加载子弹图片
         try:
             if plant_type == "Peashooter":
-                img_path = game_instance.base_dir / "images/plants/Pea.png"
+                img_path = base_dir / "images/plants/PB00.gif"
                 self.image = pygame.image.load(str(img_path)).convert_alpha()
             elif plant_type == "SnowPea":
-                img_path = game_instance.base_dir / "images/plants/SnowPea.png"
+                img_path = base_dir / "images/plants/SnowPea.gif"
                 self.image = pygame.image.load(str(img_path)).convert_alpha()
             else:
                 # 默认子弹
@@ -69,44 +69,6 @@ class Bullet(pygame.sprite.Sprite):
                     self.kill()
                     return True
         return False
-
-
-class AnimatedSprite(pygame.sprite.Sprite):
-    def __init__(self, gif_path, position=(0, 0)):
-        super().__init__()
-        self.frames = []
-        self.current_frame = 0
-        self.animation_speed = 0.1
-        self.time_since_last_frame = 0
-        self.position = position
-        self.load_gif(gif_path)
-        self.last_update_time = pygame.time.get_ticks()
-
-    def load_gif(self, gif_path):
-        """Load GIF animation using PIL and convert to pygame surfaces"""
-        try:
-            with Image.open(gif_path) as img:
-                for frame in ImageSequence.Iterator(img):
-                    frame = frame.convert("RGBA")
-                    pygame_frame = pygame.image.fromstring(
-                        frame.tobytes(), frame.size, frame.mode
-                    )
-                    self.frames.append(pygame_frame)
-        except Exception as e:
-            print(f"Failed to load GIF {gif_path}: {str(e)}")
-            placeholder = pygame.Surface((50, 50), pygame.SRCALPHA)
-            placeholder.fill((255, 0, 255, 128))
-            self.frames = [placeholder]
-
-    def update(self, dt):
-        """Update animation frames"""
-        self.time_since_last_frame += dt
-        if self.time_since_last_frame >= self.animation_speed:
-            self.time_since_last_frame = 0
-            self.current_frame = (self.current_frame + 1) % len(self.frames)
-
-    def get_current_frame(self):
-        return self.frames[self.current_frame]
 
 
 class GameEngine:
@@ -261,21 +223,14 @@ class GameEngine:
             print(f"Plant type {plant_type} not found in plants.json")
             return None
         try:
-            anim_path = self.base_dir / plant_data["animation"]
-            anim = AnimatedSprite(str(anim_path))
-            
-            plant = {
-                "type": plant_type,
-                "position": position,
-                "anim": anim,
-                "health": plant_data.get("health", 100),
-                "cooldown": 0,
-                "row": row,
-                "col": col,
-                "attack_data": plant_data.get("attack", {}),
-                "last_attack_time": 0
-            }
-            
+            from plants import Plant
+            plant = Plant(
+                self,
+                plant_type,
+                row,
+                col,
+            )
+
             return plant
         except Exception as e:
             print(f"Failed to create plant {plant_type}: {str(e)}")
@@ -284,18 +239,18 @@ class GameEngine:
     def update_plant_attacks(self, current_time):
         """更新植物攻击逻辑"""
         for plant_id, plant in self.AllPlants.items():
-            attack_data = plant.get("attack_data", {})
+            attack_data = plant.attack_data
             if not attack_data:
                 continue
                 
             attack_interval = attack_data.get("interval", 2000)  # 默认2秒攻击一次
             
             # 检查是否到了攻击时间
-            if current_time - plant["last_attack_time"] >= attack_interval:
+            if current_time - plant.last_attack_time >= attack_interval:
                 # 检查该行是否有僵尸
-                if self.has_zombies_in_row(plant["row"]):
+                if self.has_zombies_in_row(plant.row):
                     self.create_bullet(plant)
-                    plant["last_attack_time"] = current_time
+                    plant.last_attack_time = current_time
 
     def has_zombies_in_row(self, row):
         """检查指定行是否有僵尸"""
@@ -306,18 +261,20 @@ class GameEngine:
 
     def create_bullet(self, plant):
         """根据植物类型创建子弹"""
-        attack_data = plant.get("attack_data", {})
+        attack_data = plant.attack_data
+        if not attack_data:
+            attack_data = {}
         bullet_type = attack_data.get("type", "pea")
         damage = attack_data.get("damage", 20)
         
         if bullet_type == "pea":
             effect = None
-            if plant["type"] == "SnowPea":
+            if plant.type == "SnowPea":
                 effect = "freeze"
                 
             bullet = Bullet(
-                plant["type"], 
-                plant["position"], 
+                plant.type,
+                plant.position,
                 damage,
                 effect=effect
             )
@@ -331,7 +288,7 @@ class GameEngine:
 
     def instant_attack(self, plant, damage):
         """瞬时攻击（对范围内的所有僵尸造成伤害）"""
-        row = plant["row"]
+        row = plant.row
         for zombie_id, zombie in list(self.Zombies.items()):
             if hasattr(zombie, 'row_index') and zombie.row_index == row:
                 # 检查僵尸是否在攻击范围内
@@ -369,7 +326,7 @@ class GameEngine:
 
         # 植物动画
         for plant_id, plant in self.AllPlants.items():
-            plant["anim"].update(dt)
+            plant.update()
 
         # 植物攻击
         self.update_plant_attacks(current_time)
@@ -390,7 +347,7 @@ class GameEngine:
 
         # 植物死亡的清理
         for plant_id, plant in list(self.AllPlants.items()):
-            if plant.get('health', 0) <= 0:
+            if plant.health <= 0:
                 for row in range(5):
                     for col in range(9):
                         if self.Grid[row][col] == plant_id:
@@ -423,8 +380,8 @@ class GameEngine:
 
         # 植物
         for plant_id, plant in self.AllPlants.items():
-            frame = plant["anim"].get_current_frame()
-            self.screen.blit(frame, plant["position"])
+            frame = plant.get_current_frame()
+            self.screen.blit(frame, plant.position)
 
         # 子弹
         self.BulletGroup.draw(self.screen)
@@ -462,8 +419,10 @@ class GameEngine:
                 start_x=position[0],
                 engine=self   #blablabla
             )
+            '''
             zombie_obj.hp = zombie_data.get('health', zombie_obj.MAX_HP)
             zombie_obj.speed = zombie_data.get('speed', zombie_obj.BASE_SPEED)
+            '''
             return zombie_obj
         except Exception as e:
             print (f"Failed to create zombie  {zombie_type}: {str(e)}")

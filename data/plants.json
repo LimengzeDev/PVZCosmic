@@ -1,14 +1,14 @@
 {
     "Peashooter": {
-    "cost": 100,
-    "cooldown": 7.5,
-    "health": 100,
-    "card_image": "images/Card/Plants/Peashooter.png",
-    "animation": "images/Plants/PeaShooter/Peashooter.gif",
-    "attack": {
-      "type": "pea",
-      "damage": 200,
-      "interval": 2000
+        "cost": 100,
+        "cooldown": 7.5,
+        "health": 100,
+        "card_image": "images/Card/Plants/Peashooter.png",
+        "animation": "images/Plants/PeaShooter/Peashooter.gif",
+        "attack": {
+            "type": "pea",
+            "damage": 200,
+            "interval": 2000
     }
 
     },

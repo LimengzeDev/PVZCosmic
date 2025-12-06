@@ -1,8 +1,7 @@
-from linecache import cache
-
 import pygame
 import json
 from pathlib import Path
+
 
 base_dir = Path(__file__).parent
 file_path = base_dir / "data" / "zombies.json"
@@ -12,6 +11,7 @@ try:
 except Exception as e:
     zombies_data = {}
     print(f"filed to load {file_path}: {str(e)}")
+
 
 def preload_zombie_resources():
     zombies_cache = {}
@@ -27,8 +27,8 @@ def preload_zombie_resources():
                     frames.append(img)
                 animations[state] = frames
             zombies_cache[zombie_type] = animations
-        except Exception as e:
-            print(f"failed to preload zombie: {zombie_type}: {str(e)}")
+        except Exception as _e:
+            print(f"failed to preload zombie: {zombie_type}: {str(_e)}")
 
     return zombies_cache
 
@@ -43,9 +43,6 @@ TILE_H = 99
 
 class Zombie(pygame.sprite.Sprite):
     """通用僵尸：行走→接触植物→攻击→（植物死）继续走 / （僵尸死）播放死亡动画"""
-
-    BASE_SPEED = 0.8
-    MAX_HP = 100
     ATTACK_DAMAGE = 8
     ATTACK_INTERVAL = 600
     ANIM_INTERVAL = 1e-25
@@ -54,15 +51,14 @@ class Zombie(pygame.sprite.Sprite):
 
     def __init__(self, zombie_type='BasicZombie', line=1, bg=None, start_x=850, engine=None):
         """
-        :param animations: dict {"walk":[Surface...], "attack":[...], "dead":[...]}
+        :param zombie_type: zombie 种类
         :param line: 1-based 行号
         :param bg:   屏幕 Surface
         :param start_x: 初始 x
         :param engine: GameEngine 实例
         """
         super().__init__()
-        animations = all_zombies_animations[zombie_type]
-        self.animations = animations
+        self.animations = all_zombies_animations[zombie_type]
         self.engine = engine
 
         if "walk" not in self.animations:
@@ -83,12 +79,15 @@ class Zombie(pygame.sprite.Sprite):
         self.rect.y = tile_y + TILE_H - self.rect.height
 
         self.bg = bg
+        self.BASE_SPEED = zombies_data.get(zombie_type,{}).get('speed', 0.6)
+        self.MAX_HP = zombies_data.get(zombie_type, {}).get('health', 100)
         self.speed = self.BASE_SPEED
         self.hp = self.MAX_HP
 
         now = pygame.time.get_ticks()
         self.animation_timer = now
         self.last_attack_time = now
+        self.last_move_time = now
 
         self.attack_target_id = None
         self.attack_target = None
@@ -132,13 +131,14 @@ class Zombie(pygame.sprite.Sprite):
 
         if self.attack_target_id:
             p = self.engine.AllPlants.get(self.attack_target_id)
-            if (not p) or p.get("health", 0) <= 0:
+            if (not p) or p.health <= 0:
                 self.attack_target_id = None
                 self.attack_target = None
                 self.set_animation("walk")
 
         if self.state == "walk":
-            self.rect.x -= self.speed
+            # self.rect.x -= self.speed
+            self.move()
             self._try_lock_target()
 
         if self.state == "attack":
@@ -151,7 +151,7 @@ class Zombie(pygame.sprite.Sprite):
             self.set_animation("dead")
             self.death_started_at = now
 
-    # -------------------- 碰撞/锁定与攻击 --------------------
+    # -------------------- 碰撞/锁定与攻击与移动 --------------------
 
     def _try_lock_target(self):
         if not self.engine:
@@ -184,9 +184,19 @@ class Zombie(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
         if now - self.last_attack_time >= self.ATTACK_INTERVAL:
             self.last_attack_time = now
-            hp = max(0, self.attack_target.get("health", 0) - self.ATTACK_DAMAGE)
-            self.attack_target["health"] = hp
+            hp = max(0, self.attack_target.health - self.ATTACK_DAMAGE)
+            self.attack_target.health = hp
             if hp <= 0:
                 self.attack_target = None
                 self.attack_target_id = None
                 self.set_animation("walk")
+
+    def move(self):
+        now = pygame.time.get_ticks()
+        if self.speed == 0:
+            return
+        elif now - self.last_move_time >= 1 / self.speed and self.speed < 1:
+            self.rect.x -= 1
+            self.last_move_time = now
+        else:
+            self.rect.x -= self.speed

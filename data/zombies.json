@@ -1,7 +1,7 @@
 {
     "BasicZombie": {
         "health": 100,
-        "speed": 0.6,
+        "speed": 0.031,
         "damage": 1000,
         "animations": {
             "walk": {
@@ -20,7 +20,7 @@
     },
     "ConeheadZombie": {
         "health": 200,
-        "speed": 0.8,
+        "speed": 4,
         "damage": 1,
         "animations": {
             "walk": {
