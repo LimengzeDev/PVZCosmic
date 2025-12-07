@@ -1,11 +1,8 @@
 import json
-import os
 import pygame
 import sys
 from pathlib import Path
-
 from pygame.locals import *
-from PIL import Image, ImageSequence  # For GIF animation support
 
 # 方便 zombies.py 调用 GameEngine 实例
 game_instance = None
@@ -216,12 +213,8 @@ class GameEngine:
 
 
 
-    def create_plant(self, plant_type, position, row, col):
+    def create_plant(self, plant_type, row, col):
         """创建植物，添加攻击相关属性"""
-        plant_data = self.plants_data.get(plant_type, {})
-        if not plant_data:
-            print(f"Plant type {plant_type} not found in plants.json")
-            return None
         try:
             from plants import Plant
             plant = Plant(
@@ -262,8 +255,6 @@ class GameEngine:
     def create_bullet(self, plant):
         """根据植物类型创建子弹"""
         attack_data = plant.attack_data
-        if not attack_data:
-            attack_data = {}
         bullet_type = attack_data.get("type", "pea")
         damage = attack_data.get("damage", 20)
         
@@ -298,7 +289,7 @@ class GameEngine:
 
     def is_zombie_in_range(self, zombie, plant):
         """检查僵尸是否在植物的攻击范围内"""
-        plant_right = plant["position"][0] + 80
+        plant_right = plant.position[0] + 80
         zombie_left = zombie.rect.left
         
         # 僵尸在植物右侧且在攻击范围内
@@ -312,7 +303,7 @@ class GameEngine:
         for bullet in self.BulletGroup.sprites():
             bullet.check_collision(self.Zombies)
 
-    def update(self, dt):
+    def update(self):
         current_time = pygame.time.get_ticks()
         delta = (current_time - self.last_update_time) / 1000.0
         self.last_update_time = current_time
@@ -431,8 +422,6 @@ class GameEngine:
     def handle_mouse_move(self,pos):
         """处理鼠标移动事件, 更新拖动位置"""
         if self.DraggingCard:
-            dx = pos[0] - self.DraggingPos[0]
-            dy = pos[1] - self.DraggingPos[1]
             self.DraggingPos = pos
             return True
         return False
@@ -452,9 +441,7 @@ class GameEngine:
                     self.DraggingCard["Cooldown"] = self.DraggingCard["MaxCooldown"]
                     self.DraggingCard["CDReady"] = 0
 
-                    plant_x = 145 + col * 81 + 0
-                    plant_y = 80 + row * 99 - 0
-                    plant = self.create_plant(self.DraggingCard["PName"], (plant_x, plant_y), row, col)
+                    plant = self.create_plant(self.DraggingCard["PName"], row, col)
                     if plant:
                         plant_id = f"plant_{len(self.AllPlants)}"
                         self.AllPlants[plant_id] = plant
@@ -485,7 +472,7 @@ class GameEngine:
                     if event.button == 1:
                         self.handle_mouse_up(event.pos)
 
-            self.update(dt)
+            self.update()
             self.render()
 
             # 渲染拖动的卡片
