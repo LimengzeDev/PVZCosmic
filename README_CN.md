@@ -12,7 +12,7 @@
 下载本项目源代码压缩包，由[此镜像](https://mirrors.aliyun.com/python-release)下载并安装Python
 然后打开Windows命令提示符或Linux终端，运行
 ```
-python install pygame
+pip install pygame
 ```
 打开项目文件夹下的main.py即可
 ## 关于项目
