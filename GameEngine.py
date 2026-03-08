@@ -4,73 +4,11 @@ import sys
 from pathlib import Path
 from pygame.locals import *
 
-# 方便 zombies.py 调用 GameEngine 实例
-game_instance = None
 base_dir = Path(__file__).parent
-
-# 在文件开头添加Bullet类定义
-class Bullet(pygame.sprite.Sprite):
-    def __init__(self, plant_type, position, damage, speed=5, effect=None):
-        super().__init__()
-        self.plant_type = plant_type
-        self.damage = damage
-        self.speed = speed
-        self.effect = effect  # 特殊效果，如冰冻、火焰等
-        
-        # 加载子弹图片
-        try:
-            if plant_type == "Peashooter":
-                img_path = base_dir / "images/plants/PB00.gif"
-                self.image = pygame.image.load(str(img_path)).convert_alpha()
-            elif plant_type == "SnowPea":
-                img_path = base_dir / "images/plants/SnowPea.gif"
-                self.image = pygame.image.load(str(img_path)).convert_alpha()
-            else:
-                # 默认子弹
-                self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
-                pygame.draw.circle(self.image, (0, 255, 0), (7, 7), 7)
-        except :
-            self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (0, 255, 0), (7, 7), 7)
-            
-        self.rect = self.image.get_rect()
-        self.rect.centerx = position[0] + 40  # 从植物右侧发射
-        self.rect.centery = position[1] + 40
-        
-        # 记录子弹所在行
-        self.row = int((position[1] - 80) // 99)
-        
-    def update(self):
-        """更新子弹位置"""
-        self.rect.x += self.speed
-        
-        # 如果子弹超出屏幕右侧，则删除
-        if self.rect.left > 900:
-            self.kill()
-            
-    def check_collision(self, zombies):
-        """检查子弹与僵尸的碰撞"""
-        for zombie_id, zombie in list(zombies.items()):
-            if hasattr(zombie, 'rect') and self.rect.colliderect(zombie.rect):
-                # 检查是否在同一行
-                if zombie.row_index == self.row:
-                    # 对僵尸造成伤害
-                    zombie.hp -= self.damage
-                    
-                    # 应用特殊效果
-                    if self.effect == "freeze":
-                        # 冰冻效果：减速
-                        zombie.speed = max(0.2, zombie.speed * 0.5)
-                        # 可以在这里添加冰冻视觉效果
-                    
-                    self.kill()
-                    return True
-        return False
 
 
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):
-        global game_instance
         pygame.init()
         pygame.mixer.init()
 
@@ -98,7 +36,7 @@ class GameEngine:
         self.ArCard = []
         self.ArPCard = {}
         self.ArSun = []
-        self.AllPlants = {}
+        self.Plants = {}
         self.Zombies = {}
         self.DraggingCard = None
         self.DraggingPos = (0, 0)
@@ -111,10 +49,7 @@ class GameEngine:
         self.BulletGroup = pygame.sprite.Group()
         self.last_bullet_time = pygame.time.get_ticks()
         self.last_update_time = pygame.time.get_ticks()
-        
-        # ... 其余初始化代码 ...
-        # 设置全局实例
-        game_instance = self
+
 
     def load_data_file(self, filename):
         file_path = self.data_folder / filename
@@ -217,83 +152,12 @@ class GameEngine:
         """创建植物，添加攻击相关属性"""
         try:
             from plants import Plant
-            plant = Plant(
-                self,
-                plant_type,
-                row,
-                col,
-            )
+            plant = Plant(self, plant_type, row, col)
 
             return plant
         except Exception as e:
             print(f"Failed to create plant {plant_type}: {str(e)}")
             return None
-
-    def update_plant_attacks(self, current_time):
-        """更新植物攻击逻辑"""
-        for plant_id, plant in self.AllPlants.items():
-            attack_data = plant.attack_data
-            if not attack_data:
-                continue
-                
-            attack_interval = attack_data.get("interval", 2000)  # 默认2秒攻击一次
-            
-            # 检查是否到了攻击时间
-            if current_time - plant.last_attack_time >= attack_interval:
-                # 检查该行是否有僵尸
-                if self.has_zombies_in_row(plant.row):
-                    self.create_bullet(plant)
-                    plant.last_attack_time = current_time
-
-    def has_zombies_in_row(self, row):
-        """检查指定行是否有僵尸"""
-        for zombie_id, zombie in self.Zombies.items():
-            if hasattr(zombie, 'row_index') and zombie.row_index == row:
-                return True
-        return False
-
-    def create_bullet(self, plant):
-        """根据植物类型创建子弹"""
-        attack_data = plant.attack_data
-        bullet_type = attack_data.get("type", "pea")
-        damage = attack_data.get("damage", 20)
-        
-        if bullet_type == "pea":
-            effect = None
-            if plant.type == "SnowPea":
-                effect = "freeze"
-                
-            bullet = Bullet(
-                plant.type,
-                plant.position,
-                damage,
-                effect=effect
-            )
-            self.BulletGroup.add(bullet)
-            
-        elif bullet_type == "instant":
-            # 瞬时攻击（如土豆地雷）
-            self.instant_attack(plant, damage)
-            
-        # 可以在这里添加其他类型的攻击
-
-    def instant_attack(self, plant, damage):
-        """瞬时攻击（对范围内的所有僵尸造成伤害）"""
-        row = plant.row
-        for zombie_id, zombie in list(self.Zombies.items()):
-            if hasattr(zombie, 'row_index') and zombie.row_index == row:
-                # 检查僵尸是否在攻击范围内
-                if self.is_zombie_in_range(zombie, plant):
-                    zombie.hp -= damage
-                    # 可以在这里添加攻击特效
-
-    def is_zombie_in_range(self, zombie, plant):
-        """检查僵尸是否在植物的攻击范围内"""
-        plant_right = plant.position[0] + 80
-        zombie_left = zombie.rect.left
-        
-        # 僵尸在植物右侧且在攻击范围内
-        return zombie_left <= plant_right + 200  # 假设攻击范围为200像素
 
     def update_bullets(self):
         """更新所有子弹状态"""
@@ -315,12 +179,10 @@ class GameEngine:
                 card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
             card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
 
-        # 植物动画
-        for plant_id, plant in self.AllPlants.items():
+        # 植物更新
+        for plant_id, plant in self.Plants.items():
             plant.update()
 
-        # 植物攻击
-        self.update_plant_attacks(current_time)
         
         # 子弹更新
         self.update_bullets()
@@ -337,13 +199,13 @@ class GameEngine:
                 del self.Zombies[zombie_id]
 
         # 植物死亡的清理
-        for plant_id, plant in list(self.AllPlants.items()):
+        for plant_id, plant in list(self.Plants.items()):
             if plant.health <= 0:
                 for row in range(5):
                     for col in range(9):
                         if self.Grid[row][col] == plant_id:
                             self.Grid[row][col] = None
-                del self.AllPlants[plant_id]
+                del self.Plants[plant_id]
 
         self.spawn_zombies()
 
@@ -370,7 +232,7 @@ class GameEngine:
                     self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
 
         # 植物
-        for plant_id, plant in self.AllPlants.items():
+        for plant_id, plant in self.Plants.items():
             frame = plant.get_current_frame()
             self.screen.blit(frame, plant.position)
 
@@ -408,12 +270,8 @@ class GameEngine:
                 line=line_1based,
                 bg=self.screen,
                 start_x=position[0],
-                engine=self   #blablabla
+                engine=self
             )
-            '''
-            zombie_obj.hp = zombie_data.get('health', zombie_obj.MAX_HP)
-            zombie_obj.speed = zombie_data.get('speed', zombie_obj.BASE_SPEED)
-            '''
             return zombie_obj
         except Exception as e:
             print (f"Failed to create zombie  {zombie_type}: {str(e)}")
@@ -443,14 +301,12 @@ class GameEngine:
 
                     plant = self.create_plant(self.DraggingCard["PName"], row, col)
                     if plant:
-                        plant_id = f"plant_{len(self.AllPlants)}"
-                        self.AllPlants[plant_id] = plant
+                        plant_id = f"plant_{len(self.Plants)}"
+                        self.Plants[plant_id] = plant
                         self.Grid[row][col] = plant_id
 
         self.DraggingCard = None
         return True
-
-# ... 其余代码保持不变 ...
 
     def run(self):
         running = True
@@ -497,14 +353,14 @@ class GameEngine:
                 for zombie_data in self.current_level['AZ']:
                     zombie_type, count, row = zombie_data
                     for _ in range(count):
-                        # 仍按原有协议：这里的 y 用于“行推断”，create_zombie 内部会把它对齐到网格行
+                        # 这里的 y 用于“行推断”，create_zombie 内部会把它对齐到网格行
                         zombie = self.create_zombie(zombie_type, (850, 120 + row * 100))
                         if zombie:
                             zombie_id = f'zombie_{len(self.Zombies)}'
                             self.Zombies[zombie_id] = zombie
 
 
-class Lattice:
+class Grid:
     """格子类"""
     def __init__(self, row=0, col=0):
         self.rect = pygame.Rect((145 + col * 81), (80 + row * 99), 81, 99)
@@ -517,6 +373,10 @@ class Lattice:
 
     def update_plants(self):
         self.plants.update()
+
+
+class Card:
+    pass
 
 if __name__ == "__main__":
     game = GameEngine()

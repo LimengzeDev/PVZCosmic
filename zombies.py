@@ -130,7 +130,7 @@ class Zombie(pygame.sprite.Sprite):
             return
 
         if self.attack_target_id:
-            p = self.engine.AllPlants.get(self.attack_target_id)
+            p = self.engine.Plants.get(self.attack_target_id)
             if (not p) or p.health <= 0:
                 self.attack_target_id = None
                 self.attack_target = None
@@ -175,7 +175,7 @@ class Zombie(pygame.sprite.Sprite):
 
         if nearest_pid:
             self.attack_target_id = nearest_pid
-            self.attack_target = self.engine.AllPlants.get(nearest_pid)
+            self.attack_target = self.engine.Plants.get(nearest_pid)
             self.set_animation("attack")
 
     def perform_attack(self):
