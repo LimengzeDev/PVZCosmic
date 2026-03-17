@@ -9,6 +9,13 @@ base_dir = Path(__file__).parent
 
 class GameEngine:
     def __init__(self, levels_folder="levels", data_folder="data"):
+        """
+        整个窗口: 900*600
+        草坪左上角点坐标: (145, 80)
+        草坪右下角坐标: (875, 575)
+        方格长: 81
+        方格宽: 99
+        """
         pygame.init()
         pygame.mixer.init()
 
@@ -25,7 +32,7 @@ class GameEngine:
         self.loaded_levels = self.load_all_levels()
 
         self.current_level = None
-        self.W = 880
+        self.W = 900
         self.H = 600
         self.C = 9
         self.LawnMowerX = 70
@@ -36,11 +43,11 @@ class GameEngine:
         self.ArCard = []
         self.ArPCard = {}
         self.ArSun = []
-        self.Plants = {}
+        self.Plants = pygame.sprite.OrderedUpdates()
         self.Zombies = {}
         self.DraggingCard = None
         self.DraggingPos = (0, 0)
-        self.Grid = [[None for _ in range(9)] for _ in range(5)]
+        self.Grids = [[Grid(j, i) for i in range(9)] for j in range(5)]
 
         self.font = pygame.font.SysFont('Arial', 16)
         self.big_font = pygame.font.SysFont('Arial', 24)
@@ -88,8 +95,10 @@ class GameEngine:
         self.load_card_images()
 
         bg_path = self.current_level.get("backgroundImage", "images/interface/background1.jpg")
+        sb_path = base_dir / "images/interface/SeedBank.png"
         try:
             self.background = pygame.image.load(str(self.base_dir / bg_path))
+            self.seedband = pygame.image.load(str(sb_path))
         except Exception as e:
             print(f"Failed to load background {bg_path}: {str(e)}")
             self.background = pygame.Surface((880, 600))
@@ -145,14 +154,11 @@ class GameEngine:
                 gray_surface.set_at((x, y), (gray, gray, gray, a))
         return gray_surface
 
-
-
-
-    def create_plant(self, plant_type, row, col):
+    def create_plant(self, plant_type, x, y):
         """创建植物，添加攻击相关属性"""
         try:
             from plants import Plant
-            plant = Plant(self, plant_type, row, col)
+            plant:Plant = Plant(self, plant_type, x, y)
 
             return plant
         except Exception as e:
@@ -162,10 +168,6 @@ class GameEngine:
     def update_bullets(self):
         """更新所有子弹状态"""
         self.BulletGroup.update()
-        
-        # 检查子弹与僵尸的碰撞
-        for bullet in self.BulletGroup.sprites():
-            bullet.check_collision(self.Zombies)
 
     def update(self):
         current_time = pygame.time.get_ticks()
@@ -180,9 +182,12 @@ class GameEngine:
             card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
 
         # 植物更新
-        for plant_id, plant in self.Plants.items():
-            plant.update()
+        self.Plants.update()
 
+        # 格子更新
+        for line in self.Grids:
+            for grid in line:
+                grid.update()
         
         # 子弹更新
         self.update_bullets()
@@ -199,22 +204,21 @@ class GameEngine:
                 del self.Zombies[zombie_id]
 
         # 植物死亡的清理
-        for plant_id, plant in list(self.Plants.items()):
+        for plant in self.Plants:
             if plant.health <= 0:
-                for row in range(5):
-                    for col in range(9):
-                        if self.Grid[row][col] == plant_id:
-                            self.Grid[row][col] = None
-                del self.Plants[plant_id]
+                plant.kill()
 
         self.spawn_zombies()
 
     def render(self):
         self.screen.blit(self.background, (-105, 0))
+        self.screen.blit(self.seedband, (150, 0))
 
         # Sun 计数
-        sun_text = self.big_font.render(f"Sun: {self.SunNum}", True, (255, 255, 0))
-        self.screen.blit(sun_text, (10, 10))
+        sun_text = self.font.render(f"{self.SunNum}", True, (0, 0, 0))
+        sun_text_rect = sun_text.get_rect()
+        sun_text_rect.center = (187, 73)
+        self.screen.blit(sun_text, sun_text_rect)
 
         # 卡片
         for card in self.ArCard:
@@ -232,7 +236,7 @@ class GameEngine:
                     self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
 
         # 植物
-        for plant_id, plant in self.Plants.items():
+        for plant in self.Plants:
             frame = plant.get_current_frame()
             self.screen.blit(frame, plant.position)
 
@@ -294,16 +298,13 @@ class GameEngine:
             row = (pos[1] - 80) // 99
 
             if 0 <= row < 5 and 0 <= col < 9:
-                if self.Grid[row][col] is None:
+                plant = self.create_plant(self.DraggingCard["PName"],
+                self.Grids[row][col].rect.left, self.Grids[row][col].rect.top)
+                if plant is not None and self.Grids[row][col].planting(plant):
                     self.SunNum -= self.DraggingCard["Cost"]
                     self.DraggingCard["Cooldown"] = self.DraggingCard["MaxCooldown"]
                     self.DraggingCard["CDReady"] = 0
-
-                    plant = self.create_plant(self.DraggingCard["PName"], row, col)
-                    if plant:
-                        plant_id = f"plant_{len(self.Plants)}"
-                        self.Plants[plant_id] = plant
-                        self.Grid[row][col] = plant_id
+                    self.Plants.add(plant)      # type:ignore
 
         self.DraggingCard = None
         return True
@@ -312,7 +313,6 @@ class GameEngine:
         running = True
         while running:
             current_time = pygame.time.get_ticks()
-            dt = (current_time - self.last_time) / 1000.0
             self.last_time = current_time
 
             for event in pygame.event.get():
@@ -362,17 +362,36 @@ class GameEngine:
 
 class Grid:
     """格子类"""
-    def __init__(self, row=0, col=0):
-        self.rect = pygame.Rect((145 + col * 81), (80 + row * 99), 81, 99)
-        self.isPlanted = False
+    def __init__(self, row=0, col=0, length=81, width=99):
+        self.rect = pygame.Rect((145 + col * length), (80 + row * width), length, width)
+        self.isPlanted = False      # 是否种植了植物
         self.plants = pygame.sprite.OrderedUpdates()
-        self.reduplication = False
+        self.reduplication = False      # 是否可叠种
         self.row = row
         self.col = col
 
 
-    def update_plants(self):
-        self.plants.update()
+    def update(self):
+        """格子更新"""
+        if not self.plants:
+            self.isPlanted = False
+
+    def planting(self, plant):
+        """种植植物"""
+        if not self.isPlanted:
+            self.plants.add(plant)
+            self.isPlanted = True
+            return True
+        elif self.isPlanted and self.reduplication:
+            self.plants.add(plant)
+            return True
+        return False
+
+
+
+class SeedBand:
+    def __init__(self):
+        pass
 
 
 class Card:

@@ -130,14 +130,13 @@ class Zombie(pygame.sprite.Sprite):
             return
 
         if self.attack_target_id:
-            p = self.engine.Plants.get(self.attack_target_id)
+            p = self.attack_target if self.attack_target_id.plants.sprites() else None
             if (not p) or p.health <= 0:
                 self.attack_target_id = None
                 self.attack_target = None
                 self.set_animation("walk")
 
         if self.state == "walk":
-            # self.rect.x -= self.speed
             self.move()
             self._try_lock_target()
 
@@ -159,23 +158,19 @@ class Zombie(pygame.sprite.Sprite):
         row = self.row_index
         nearest_pid = None
         for col in range(8, -1, -1):
-            pid = self.engine.Grid[row][col]
+            pid = self.engine.Grids[row][col]
             if not pid:
                 continue
-            cell_rect = pygame.Rect(
-                TILE_LEFT + col * TILE_W,
-                TILE_TOP + row * TILE_H,
-                TILE_W,
-                TILE_H
-            )
-            if (self.rect.left <= cell_rect.right - self.CONTACT_PAD and
-                self.rect.right > cell_rect.left + 4):
+            grid_rect = pid.rect
+            if (self.rect.left <= grid_rect.right - self.CONTACT_PAD and
+                self.rect.right > grid_rect.left + 4):
                 nearest_pid = pid
                 break
 
-        if nearest_pid:
+        if nearest_pid and nearest_pid.plants.sprites():
             self.attack_target_id = nearest_pid
-            self.attack_target = self.engine.Plants.get(nearest_pid)
+            if not self.attack_target:
+                self.attack_target = nearest_pid.plants.sprites()[0] if nearest_pid.plants.sprites() else None
             self.set_animation("attack")
 
     def perform_attack(self):

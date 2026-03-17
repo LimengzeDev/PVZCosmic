@@ -9,9 +9,10 @@
             "type": "pea",
             "damage": 200,
             "interval": 2000
-    }
+        }
 
     },
+
     "Jalapeno": {
         "cost":200,
         "cooldown":9,
@@ -19,20 +20,23 @@
         "animation":"images/Plants/Jalapeno/JalapenoAttack.gif",
         "card_image":"images/Card/Plants/Jalapeno.png"
     },
+
     "SunFlower": {
         "cost": 50,
         "cooldown": 7.5,
-        "health": 1,
+        "health": 400,
         "animation": "images/Plants/SunFlower/SunFlower.gif",
         "card_image": "images/Card/Plants/SunFlower.png"
     },
+
     "WallNut": {
         "cost": 50,
-        "cooldown": 30,
+        "cooldown": 3,
         "health": 400,
         "animation": "images/Plants/WallNut/WallNut.gif",
         "card_image": "images/Card/Plants/WallNut.png"
     },
+
     "CherryBomb": {
         "cost": 150,
         "cooldown": 30,
@@ -40,6 +44,7 @@
         "animation": "images/Plants/CherryBomb/CherryBomb.gif",
         "card_image": "images/Card/Plants/CherryBomb.png"
     },
+
     "PotatoMine": {
         "cost": 25,
         "cooldown": 15,

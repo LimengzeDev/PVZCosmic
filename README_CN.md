@@ -18,3 +18,4 @@ pip install pygame
 ## 关于项目
 * QQ群号：770312168
 * [Gitee项目地址](https://gitee.com/limengzecoder/PVZCosmic)
+* 开发者都是苦逼的高中生，更新慢，请见谅，Gomen nasai

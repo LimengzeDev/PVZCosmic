@@ -105,7 +105,7 @@ def inter():
             adv_button.is_click(event)
             wood2_button.is_click(event)
         # 绘制图片
-        if running is True:
+        if running:
             screen.screen1.blit(surface, (0, 0))
             screen.screen1.blit(WoodSign1, (10, 0))
             wood2_button.draw()

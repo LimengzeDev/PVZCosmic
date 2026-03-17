@@ -16,26 +16,20 @@ screen1 = pygame.display.set_mode(size)
 pygame.display.set_caption("PlantsVsZombies")
 
 
-class GameButton:   # 定义按钮类
-
-    """
-    position为图片左上角坐标
-    modify为绘制另一张图时，
-    为使图片位置不变，对position的修正量
-    button_image1和button_image2为按钮不同状态下的图片
-    其中button_image1为默认显示的图片
-    image为要绘制的图片
-    button_rect为按钮的位置矩形，可以有多个，
-    用列表的形式上传参数
-    button_down为按钮是否按下的状态
-    按下时为 1
-    未按下时为 0
-    command为按钮按下时执行的命令
-    file_to_open为要打开的文件
-    """
+class GameButton:
+    """游戏按钮类"""
     
     def __init__(self, button_rect: list, button_image1: pygame.Surface = None,
                  button_image2: pygame.Surface = None, position=(0, 0), modify=(0, 0), command=None, file=None):
+        """
+        :param position: 图片左上角坐标
+        :param modify: 绘制另一张图时,为使图片位置不变,对 position 的修正量
+        :param button_image1: 为按钮不同状态下的图片
+        :param button_image2: 同 button_image1,image1 为默认图片赋值给 image
+        :param button_rect: 为按钮的位置矩形，可以有多个,用列表的形式上传参数
+        :param command: 为按钮按下时执行的命令
+        :param file: 为要打开的文件
+        """
         self.button_image1 = button_image1
         self.button_image2 = button_image2
         self.image = button_image1
@@ -43,22 +37,24 @@ class GameButton:   # 定义按钮类
         self.position = position
         self.pos = position
         self.modify = modify
-        self.button_down = 0
+        self.button_down = 0        #按钮是否按下的状态,按下时为 1,未按下时为 0
         self.command = command
         self.file_to_open = file  # 存储要打开的文件路径
 
     def is_on(self, event):
-        if event.type == pygame.MOUSEMOTION:        # 检测鼠标是否在按钮上
+        """检测鼠标是否在按钮上"""
+        if event.type == pygame.MOUSEMOTION:
             for rect in self.button_rect:
                 if rect.collidepoint(event.pos):
-                    self.image = self.button_image2  # 如果在绘制另一张图片
+                    self.image = self.button_image2  # 如果鼠标在按钮上绘制另一张图片
                     break
             else:
                 if self.button_down == 0:
                     self.image = self.button_image1         # 否则绘制原图片
     
     def is_click(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:    # 检测按钮是否按下
+        """检测按钮是否按下"""
+        if event.type == pygame.MOUSEBUTTONDOWN:
             for rect in self.button_rect:
                 if rect.collidepoint(event.pos) and event.button == 1:
                     self.image = self.button_image2
@@ -92,6 +88,7 @@ class GameButton:   # 定义按钮类
             print(f"错误信息: {e}")
 
     def draw(self):
+        """绘制按钮"""
         if self.button_down == 0:
             if self.image == self.button_image1:
                 self.pos = self.position
@@ -109,13 +106,11 @@ class GameButton:   # 定义按钮类
 
 
 class GameTimer:
-    """
-    倒计时器类
-    """
+    """倒计时器类"""
     def __init__(self, duration):
         """
         初始化计时器
-        self.duration: 倒计时秒数
+        :param duration: 倒计时秒数
         """
         self.duration = duration
         self.start_time = None

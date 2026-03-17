@@ -8,16 +8,19 @@
                 "path": "images/Zombies/Zombie/Walk",
                 "frames": 120
             },
+
             "attack": {
                 "path": "images/Zombies/Zombie/Attack",
                 "frames": 21
             },
+
             "dead": {
                 "path": "images/Zombies/Zombie/Die",
                 "frames": 10
             }
         }
     },
+
     "ConeheadZombie": {
         "health": 200,
         "speed": 4,
@@ -27,10 +30,12 @@
                 "path": "images/Zombies/ConeheadZombie/Walk",
                 "frames": 21
             },
+
             "attack": {
                 "path": "images/Zombies/ConeheadZombie/Attack",
                 "frames": 11
             },
+
             "dead": {
                 "path": "images/Zombies/ConeheadZombie/Die",
                 "frames": 10

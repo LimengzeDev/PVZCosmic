@@ -107,11 +107,11 @@ class Bullet(pygame.sprite.Sprite):
 class Plant(pygame.sprite.Sprite):
     """通用植物"""
 
-    def __init__(self, engine, plant_type, row, col):
+    def __init__(self, engine, plant_type, x, y) -> None:
         """
         :param engine: GameEngine 实例
         :param plant_type: 植物种类
-        :param row: 所在行
+        :param x: 所在行
         ;param col: 所在列
         """
         super().__init__()
@@ -122,8 +122,8 @@ class Plant(pygame.sprite.Sprite):
         self.frame_index = 0        #帧动画图片索引
         self.image = self.animation[self.frame_index]       #当前帧
         self.rect = self.image.get_rect()
-        self.rect.x = 145 + col * 81
-        self.rect.y = 80 + row * 99
+        self.rect.x = x
+        self.rect.y = y
         self.position = self.rect.x, self.rect.y
 
         self.anim_interval = 1e-25      #动画两帧间隔
@@ -133,8 +133,6 @@ class Plant(pygame.sprite.Sprite):
         self.last_attack_time = now     #攻击计时器
 
         #植物初始化
-        self.row = row
-        self.col = col
         self.type = plant_type
         self.health = plants_data.get(plant_type, {}).get("health", 100)
         self.attack_data = plants_data.get(plant_type, {}).get("attack", {})        #攻击数据
