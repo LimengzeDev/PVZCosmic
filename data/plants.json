@@ -1,7 +1,7 @@
 {
     "Peashooter": {
         "cost": 100,
-        "cooldown": 7.5,
+        "cooldown": 0.5,
         "health": 100,
         "card_image": "images/Card/Plants/Peashooter.png",
         "animation": "images/Plants/PeaShooter/Peashooter.gif",

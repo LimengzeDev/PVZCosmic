@@ -3,6 +3,7 @@ import pygame
 import sys
 from pathlib import Path
 from pygame.locals import *
+from plants import all_plants_animations
 
 base_dir = Path(__file__).parent
 
@@ -40,12 +41,12 @@ class GameEngine:
         self.Chose = 0
         self.ChoseCard = ""
         self.MPID = ""
-        self.ArCard = []
-        self.ArPCard = {}
+        self.cards = pygame.sprite.Group()
         self.ArSun = []
         self.Plants = pygame.sprite.OrderedUpdates()
         self.Zombies = {}
         self.DraggingCard = None
+        self.DraggingImage = None
         self.DraggingPos = (0, 0)
         self.Grids = [[Grid(j, i) for i in range(9)] for j in range(5)]
 
@@ -92,7 +93,6 @@ class GameEngine:
         self.SunNum = self.current_level.get("SunNum", 50)
 
         self.init_plant_cards()
-        self.load_card_images()
 
         bg_path = self.current_level.get("backgroundImage", "images/interface/background1.jpg")
         sb_path = base_dir / "images/interface/SeedBank.png"
@@ -105,54 +105,9 @@ class GameEngine:
             self.background.fill((100, 200, 100))
 
     def init_plant_cards(self):
-        self.ArCard = []
-        self.ArPCard = {}
-
         for i, plant_type in enumerate(self.PName):
-            plant_data = self.plants_data.get(plant_type, {})
-            card_data = {
-                "DID": f"Card{plant_type}",
-                "PName": plant_type,
-                "Index": i,
-                "Rect": pygame.Rect(10, 80 + i * 70, 70, 90),  # vertical arrangement
-                "Cost": plant_data.get("cost", 100),
-                "MaxCooldown": plant_data.get("cooldown", 7.5),
-                "Cooldown": 0,
-                "CDReady": 1,
-                "SunReady": 1,
-                "Cooling": False,
-                "ImgPath": plant_data.get("card_image", "")
-            }
-            self.ArCard.append(card_data)
-            self.ArPCard[plant_type] = card_data
-
-    def load_card_images(self):
-        self.card_images = {}
-        self.card_gray_images = {}
-
-        for plant_type, plant_data in self.plants_data.items():
-            if plant_type in self.PName:
-                try:
-                    img_path = self.base_dir / plant_data["card_image"]
-                    normal_img = pygame.image.load(str(img_path)).convert_alpha()
-                    self.card_images[plant_type] = normal_img
-                    gray_img = self.convert_to_grayscale(normal_img.copy())
-                    self.card_gray_images[plant_type] = gray_img
-                except Exception as e:
-                    print(f"Failed to load card image for {plant_type}: {str(e)}")
-                    placeholder = pygame.Surface((70, 90), pygame.SRCALPHA)
-                    placeholder.fill((200, 100, 100, 128))
-                    self.card_images[plant_type] = placeholder
-                    self.card_gray_images[plant_type] = self.convert_to_grayscale(placeholder.copy())
-
-    def convert_to_grayscale(self, surface):
-        gray_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        for x in range(surface.get_width()):
-            for y in range(surface.get_height()):
-                r, g, b, a = surface.get_at((x, y))
-                gray = int(0.21 * r + 0.72 * g + 0.07 * b)
-                gray_surface.set_at((x, y), (gray, gray, gray, a))
-        return gray_surface
+            card = Card(self, plant_type,10, 80 + i * 70)
+            self.cards.add(card)    # type: ignore
 
     def create_plant(self, plant_type, x, y):
         """创建植物，添加攻击相关属性"""
@@ -170,16 +125,7 @@ class GameEngine:
         self.BulletGroup.update()
 
     def update(self):
-        current_time = pygame.time.get_ticks()
-        delta = (current_time - self.last_update_time) / 1000.0
-        self.last_update_time = current_time
-
-        # 卡片冷却
-        for card in self.ArCard:
-            if card["Cooldown"] > 0:
-                card["Cooldown"] = max(0, card["Cooldown"] - delta)
-                card["CDReady"] = 1 if card["Cooldown"] <= 0 else 0
-            card["SunReady"] = 1 if self.SunNum >= card["Cost"] else 0
+        self.last_update_time = pygame.time.get_ticks()
 
         # 植物更新
         self.Plants.update()
@@ -188,6 +134,9 @@ class GameEngine:
         for line in self.Grids:
             for grid in line:
                 grid.update()
+
+        # 卡片更新
+        self.cards.update()
         
         # 子弹更新
         self.update_bullets()
@@ -221,24 +170,10 @@ class GameEngine:
         self.screen.blit(sun_text, sun_text_rect)
 
         # 卡片
-        for card in self.ArCard:
-            plant_type = card["PName"]
-            if plant_type in self.card_images:
-                if card["CDReady"] and card["SunReady"]:
-                    img = self.card_images[plant_type]
-                else:
-                    img = self.card_gray_images[plant_type]
-
-                if card != self.DraggingCard:
-                    self.screen.blit(img, card["Rect"])
-                    cost_text = self.font.render(str(card["Cost"]), True,
-                                                 (255, 255, 0) if card["SunReady"] else (150, 150, 150))
-                    self.screen.blit(cost_text, (card["Rect"].x + 5, card["Rect"].y + 70))
+        self.cards.draw(self.screen)
 
         # 植物
-        for plant in self.Plants:
-            frame = plant.get_current_frame()
-            self.screen.blit(frame, plant.position)
+        self.Plants.draw(self.screen)
 
         # 子弹
         self.BulletGroup.draw(self.screen)
@@ -247,16 +182,6 @@ class GameEngine:
         for zombie_id, zombie in self.Zombies.items():
             if hasattr(zombie, 'image') and hasattr(zombie, 'rect'):
                 self.screen.blit(zombie.image, zombie.rect)
-
-    def handle_mouse_up(self, pos):
-
-        """处理鼠标释放事件，开始拖动卡片"""
-        for card in self.ArCard:
-            if card['Rect'].collidepoint(pos) and card["CDReady"] and card["SunReady"]:
-                self.DraggingCard = card
-                self.DraggingPos = pos
-                return True
-        return False
 
     def create_zombie(self, zombie_type, position):
         zombie_data = self.zombies_data.get(zombie_type, {})
@@ -283,31 +208,35 @@ class GameEngine:
 
     def handle_mouse_move(self,pos):
         """处理鼠标移动事件, 更新拖动位置"""
-        if self.DraggingCard:
+        if self.DraggingImage:
             self.DraggingPos = pos
-            return True
-        return False
+        else:
+            self.DraggingImage = None
 
     def handle_mouse_down(self, pos):
-        """处理鼠标按下事件，放置植物"""
+        """处理鼠标按下事件"""
         if not self.DraggingCard:
-            return False
+            for card in self.cards:
+                if card.rect.collidepoint(pos):
+                    card.handle_click()
+            else:
+                return
 
         if 145 <= pos[0] <= 875 and 80 <= pos[1] <= 575:
             col = (pos[0] - 145) // 81
             row = (pos[1] - 80) // 99
 
             if 0 <= row < 5 and 0 <= col < 9:
-                plant = self.create_plant(self.DraggingCard["PName"],
+                plant = self.create_plant(self.DraggingCard.name,
                 self.Grids[row][col].rect.left, self.Grids[row][col].rect.top)
                 if plant is not None and self.Grids[row][col].planting(plant):
-                    self.SunNum -= self.DraggingCard["Cost"]
-                    self.DraggingCard["Cooldown"] = self.DraggingCard["MaxCooldown"]
-                    self.DraggingCard["CDReady"] = 0
+                    self.SunNum -= self.DraggingCard.cost
+                    self.DraggingCard.cooldown = self.DraggingCard.max_cooldown
+                    self.DraggingCard.CDready = False
                     self.Plants.add(plant)      # type:ignore
 
         self.DraggingCard = None
-        return True
+        self.DraggingImage = None
 
     def run(self):
         running = True
@@ -324,18 +253,14 @@ class GameEngine:
                 elif event.type == MOUSEMOTION:
                     if event.buttons[0]:
                         self.handle_mouse_move(event.pos)
-                elif event.type == MOUSEBUTTONUP:
-                    if event.button == 1:
-                        self.handle_mouse_up(event.pos)
 
             self.update()
             self.render()
 
             # 渲染拖动的卡片
-            if self.DraggingCard:
+            if self.DraggingImage:
                 mouse_pos = pygame.mouse.get_pos()
-                img = self.card_images[self.DraggingCard["PName"]]
-                self.screen.blit(img, (mouse_pos[0] - 35, mouse_pos[1] - 45))
+                self.screen.blit(self.DraggingImage, (mouse_pos[0] - 35, mouse_pos[1] - 45))
 
             pygame.display.flip()
             self.clock.tick(60)
@@ -366,7 +291,7 @@ class Grid:
         self.rect = pygame.Rect((145 + col * length), (80 + row * width), length, width)
         self.isPlanted = False      # 是否种植了植物
         self.plants = pygame.sprite.OrderedUpdates()
-        self.reduplication = False      # 是否可叠种
+        self.reduplication = True      # 是否可叠种
         self.row = row
         self.col = col
 
@@ -388,14 +313,62 @@ class Grid:
         return False
 
 
+class Card(pygame.sprite.Sprite):
+    """卡片类(以后兼容僵尸)"""
+    def __init__(self, engine, card_type, x, y):
+        super().__init__()
 
-class SeedBand:
-    def __init__(self):
+        self.engine = engine
+        self.data = self.engine.plants_data.get(card_type, {})
+        self.name = card_type
+        self.cost = self.data.get("cost", 50)
+        self.max_cooldown = self.data.get("cooldown", 7.5)
+
+        self.cooldown = 0
+        self.CDready = True
+        self.sun_ready = True
+
+        self.normal_image = self.load_card_image()
+        self.gray_img = self.get_gray_image()
+        self.image = self.normal_image
+        self.plant_img = all_plants_animations[card_type][0]
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = x, y
+
+    def load_card_image(self):
+        try:
+            img_path = self.engine.base_dir / self.data.get("card_image")
+            image = pygame.image.load(str(img_path)).convert_alpha()
+            return image
+        except Exception as e:
+            print(f"Failed to load card image for {self.name}: {str(e)}")
+            placeholder = pygame.Surface((70, 90), pygame.SRCALPHA)
+            placeholder.fill((200, 100, 100, 128))
+            return placeholder
+
+    def get_gray_image(self):
+        gary_img = self.normal_image.copy()
+        over_lay = pygame.Surface(self.normal_image.get_size(), pygame.SRCALPHA)
+        over_lay.fill((0, 0, 0, 160))
+        gary_img.blit(over_lay, (0, 0))
+        return gary_img
+
+    def handle_click(self):
+        if self.sun_ready and self.CDready and (not self.engine.DraggingCard):
+            self.engine.DraggingCard = self
+            self.engine.DraggingImage = self.plant_img
         pass
 
+    def update(self):
+        current_time = pygame.time.get_ticks()
+        delta = (current_time - self.engine.last_update_time) / 1000
+        if self.cooldown > 0:
+            self.cooldown = max(0, self.cooldown - delta)
+        self.image = self.gray_img if (self.engine.DraggingCard == self or
+                                       not (self.sun_ready and self.CDready)) else self.normal_image
+        self.CDready = True if self.cooldown <= 0 else False
+        self.sun_ready = True if self.engine.SunNum >= self.cost else False
 
-class Card:
-    pass
 
 if __name__ == "__main__":
     game = GameEngine()
